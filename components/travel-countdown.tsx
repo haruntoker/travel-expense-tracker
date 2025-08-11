@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Plane, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -26,30 +27,23 @@ interface CountdownTime {
   seconds: number;
 }
 
-const STORAGE_KEY = "travel-countdown-date";
-
-export function TravelCountdown() {
-  const [travelDate, setTravelDate] = useState<string>("");
+export function TravelCountdown({ travelProfileId }: { travelProfileId: string }) {
   const [countdown, setCountdown] = useState<CountdownTime>({
     days: 0,
     hours: 0,
     minutes: 0,
     seconds: 0,
   });
-  const [isActive, setIsActive] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [tempDate, setTempDate] = useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { travelCountdown, setTravelCountdown, clearTravelCountdown } =
+    useDatabase(travelProfileId);
 
-  // Load saved travel date from localStorage
-  useEffect(() => {
-    const savedDate = localStorage.getItem(STORAGE_KEY);
-    if (savedDate) {
-      setTravelDate(savedDate);
-      setIsActive(true);
-    }
-  }, []);
+  // Get travel date from database state
+  const travelDate = travelCountdown?.travelDate || "";
+  const isActive = travelCountdown?.isActive || false;
 
   // Countdown timer effect
   useEffect(() => {
@@ -62,7 +56,6 @@ export function TravelCountdown() {
 
       if (difference <= 0) {
         setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        setIsActive(false);
         toast({
           title: "🎉 Travel Day! 🎉",
           description:
@@ -104,7 +97,7 @@ export function TravelCountdown() {
     return () => clearInterval(timer);
   }, [isActive, travelDate, toast, countdown.days]);
 
-  const handleSetDate = useCallback(() => {
+  const handleSetDate = useCallback(async () => {
     if (!tempDate) {
       toast({
         title: "No Date Selected",
@@ -126,41 +119,43 @@ export function TravelCountdown() {
       return;
     }
 
-    setTravelDate(tempDate);
-    setIsActive(true);
-    setIsEditing(false);
-    localStorage.setItem(STORAGE_KEY, tempDate);
+    const success = await setTravelCountdown(tempDate);
+    if (success) {
+      setIsEditing(false);
 
-    // Calculate time until travel
-    const timeUntilTravel = selectedDate.getTime() - now.getTime();
-    const daysUntilTravel = Math.ceil(timeUntilTravel / (1000 * 60 * 60 * 24));
+      // Calculate time until travel
+      const timeUntilTravel = selectedDate.getTime() - now.getTime();
+      const daysUntilTravel = Math.ceil(
+        timeUntilTravel / (1000 * 60 * 60 * 24)
+      );
 
-    toast({
-      title: "🎉 Countdown Started!",
-      description: `Counting down to ${selectedDate.toLocaleDateString(
-        "en-US",
-        {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        }
-      )} (${daysUntilTravel} days away)`,
-    });
-  }, [tempDate, toast]);
+      toast({
+        title: "🎉 Countdown Started!",
+        description: `Counting down to ${selectedDate.toLocaleDateString(
+          "en-US",
+          {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }
+        )} (${daysUntilTravel} days away)`,
+      });
+    }
+  }, [tempDate, toast, setTravelCountdown]);
 
-  const handleClearDate = useCallback(() => {
-    setTravelDate("");
-    setIsActive(false);
-    setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-    localStorage.removeItem(STORAGE_KEY);
-    setIsDeleteDialogOpen(false);
-    toast({
-      title: "🗑️ Countdown Cleared",
-      description:
-        "Travel countdown has been reset. You can set a new date anytime!",
-    });
-  }, [toast]);
+  const handleClearDate = useCallback(async () => {
+    const success = await clearTravelCountdown();
+    if (success) {
+      setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      setIsDeleteDialogOpen(false);
+      toast({
+        title: "🗑️ Countdown Cleared",
+        description:
+          "Travel countdown has been reset. You can set a new date anytime!",
+      });
+    }
+  }, [clearTravelCountdown, toast]);
 
   const handleEditDate = useCallback(() => {
     setTempDate(travelDate);
@@ -229,7 +224,7 @@ export function TravelCountdown() {
     return (
       <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-blue-800">
+          <CardTitle className="flex items-center justify-center space-x-2 text-blue-800">
             <Plane className="h-5 w-5" />
             <span>Travel Countdown</span>
           </CardTitle>

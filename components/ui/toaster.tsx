@@ -9,9 +9,25 @@ import {
   ToastViewport,
 } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
+import React from "react";
 
 export function Toaster() {
   const { toasts } = useToast();
+
+  // Debug: Log toast data to help identify empty toasts
+  React.useEffect(() => {
+    if (toasts.length > 0) {
+      console.log(
+        "🔔 Current toasts:",
+        toasts.map((t) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          variant: t.variant,
+        }))
+      );
+    }
+  }, [toasts]);
 
   return (
     <ToastProvider>

@@ -4,8 +4,8 @@
 import * as React from "react"
 
 import type {
-  ToastActionElement,
-  ToastProps,
+    ToastActionElement,
+    ToastProps,
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
@@ -145,6 +145,17 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
 
+  // Validate toast content to prevent empty toasts
+  if (!props.title && !props.description) {
+    console.warn('Toast created without title or description:', props)
+    // Provide fallback content for empty toasts
+    props = {
+      ...props,
+      title: props.title || 'Notification',
+      description: props.description || 'Something happened',
+    }
+  }
+
   const update = (props: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
@@ -191,4 +202,5 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+export { toast, useToast }
+

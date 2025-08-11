@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthForm } from "@/components/auth/auth-form";
+import { UserProfile } from "@/components/auth/user-profile";
 import { ExpenseCharts } from "@/components/expense-charts";
 import { ExpenseTable } from "@/components/expense-table";
 import { TravelCountdown } from "@/components/travel-countdown";
@@ -14,7 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
 import {
   AlertTriangle,
   CheckCircle,
@@ -34,45 +38,184 @@ export interface Expense {
   updatedAt: Date;
 }
 
-const INITIAL_EXPENSES: Expense[] = [
-  {
-    id: "1",
-    category: "Airline Ticket",
-    amount: 450,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    category: "Rental Car",
-    amount: 280,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    category: "Accommodation",
-    amount: 600,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
-
 const DEFAULT_BUDGET = 2000;
 const STORAGE_KEYS = {
   EXPENSES: "travel-expenses",
   BUDGET: "travel-budget",
+  SELECTED_TRAVEL_PROFILE: "selected-travel-profile",
 } as const;
 
 export default function TravelExpensesTracker() {
-  const [expenses, setExpenses] = useState<Expense[]>(INITIAL_EXPENSES);
-  const [budget, setBudget] = useState<number>(DEFAULT_BUDGET);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
   const [tempBudget, setTempBudget] = useState<number>(DEFAULT_BUDGET);
   const [isExporting, setIsExporting] = useState(false);
   const [showBudgetAlert, setShowBudgetAlert] = useState(false);
+  const [selectedTravelProfile, setSelectedTravelProfile] = useState<
+    string | null
+  >(null);
+  const [travelProfiles, setTravelProfiles] = useState<any[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const {
+    expenses,
+    budget,
+    isLoading,
+    isInitialized,
+    addExpense,
+    updateExpense,
+    deleteExpense,
+    setBudget: setDatabaseBudget,
+    removeBudget,
+    loadData,
+    clearData,
+  } = useDatabase(selectedTravelProfile);
+
+  // Load selected travel profile from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedProfile = localStorage.getItem(
+        STORAGE_KEYS.SELECTED_TRAVEL_PROFILE
+      );
+      if (savedProfile) {
+        setSelectedTravelProfile(savedProfile);
+      }
+    }
+  }, []);
+
+  // Save selected travel profile to localStorage when it changes
+  useEffect(() => {
+    if (selectedTravelProfile && typeof window !== "undefined") {
+      localStorage.setItem(
+        STORAGE_KEYS.SELECTED_TRAVEL_PROFILE,
+        selectedTravelProfile
+      );
+    }
+  }, [selectedTravelProfile]);
+
+  // Load user's travel profiles
+  useEffect(() => {
+    const loadTravelProfiles = async () => {
+      if (!user) {
+        // Clear localStorage when user logs out
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(STORAGE_KEYS.SELECTED_TRAVEL_PROFILE);
+        }
+        setSelectedTravelProfile(null);
+        return;
+      }
+
+      setIsLoadingProfiles(true);
+      try {
+        // Use the existing Supabase client from auth context
+        const { supabase } = await import("@/lib/supabase");
+
+        // Get profiles where user is owner
+        const { data: ownedProfiles } = await supabase
+          .from("travel_profiles")
+          .select("*")
+          .eq("owner_id", user.id);
+
+        // Get profiles where user is a member
+        const { data: memberProfiles } = await supabase
+          .from("travel_profile_members")
+          .select(
+            `
+          travel_profile_id,
+          travel_profiles (*)
+        `
+          )
+          .eq("user_id", user.id);
+
+        const allProfiles = [
+          ...(ownedProfiles || []),
+          ...(memberProfiles?.map((m) => m.travel_profiles).filter(Boolean) ||
+            []),
+        ];
+
+        setTravelProfiles(allProfiles);
+
+        // Check if the currently selected profile still exists
+        if (selectedTravelProfile) {
+          const profileExists = allProfiles.some(
+            (profile) =>
+              profile &&
+              typeof profile === "object" &&
+              "id" in profile &&
+              profile.id === selectedTravelProfile
+          );
+          if (!profileExists) {
+            // Clear the saved profile if it no longer exists
+            if (typeof window !== "undefined") {
+              localStorage.removeItem(STORAGE_KEYS.SELECTED_TRAVEL_PROFILE);
+            }
+            setSelectedTravelProfile(null);
+          }
+        }
+
+        // Auto-select first profile if none selected and no saved profile
+        if (!selectedTravelProfile && allProfiles.length > 0) {
+          const firstProfile = allProfiles[0];
+          if (
+            firstProfile &&
+            typeof firstProfile === "object" &&
+            "id" in firstProfile
+          ) {
+            setSelectedTravelProfile(firstProfile.id as string);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading travel profiles:", error);
+      } finally {
+        setIsLoadingProfiles(false);
+      }
+    };
+
+    loadTravelProfiles();
+  }, [user, selectedTravelProfile]);
+
+  // Handle travel profile selection change
+  const handleTravelProfileChange = useCallback(
+    async (profileId: string | null) => {
+      setIsSwitchingProfile(true);
+
+      // Clear existing data before switching profiles
+      if (clearData) {
+        clearData();
+      }
+
+      setSelectedTravelProfile(profileId);
+
+      // Load data for the new profile
+      if (profileId) {
+        console.log("Switching to travel profile:", profileId);
+        // Load data for the new profile
+        if (loadData) {
+          await loadData();
+        }
+      } else {
+        console.log("No travel profile selected");
+      }
+
+      setIsSwitchingProfile(false);
+    },
+    [loadData, clearData]
+  );
+
+  // Reload data when travel profile changes
+  useEffect(() => {
+    if (selectedTravelProfile && loadData) {
+      console.log("Travel profile changed to:", selectedTravelProfile);
+      loadData(); // Refresh data for the new profile immediately
+    }
+  }, [selectedTravelProfile, loadData]);
+
+  // Only show database loading when user is authenticated and has a travel profile selected
+  const shouldShowDatabaseLoading =
+    user &&
+    selectedTravelProfile &&
+    (isLoading || !isInitialized || isSwitchingProfile);
 
   // Memoized calculations
   const totalSpent = useMemo(
@@ -80,122 +223,134 @@ export default function TravelExpensesTracker() {
     [expenses]
   );
 
+  const budgetAmount = budget?.amount || DEFAULT_BUDGET;
   const remainingBudget = useMemo(
-    () => budget - totalSpent,
-    [budget, totalSpent]
+    () => budgetAmount - totalSpent,
+    [budgetAmount, totalSpent]
   );
   const budgetUsagePercentage = useMemo(
-    () => Math.round((totalSpent / budget) * 100),
-    [totalSpent, budget]
+    () => (budget?.amount ? Math.round((totalSpent / budgetAmount) * 100) : 0),
+    [totalSpent, budgetAmount, budget]
   );
 
-  const isOverBudget = useMemo(() => remainingBudget < 0, [remainingBudget]);
+  const isOverBudget = useMemo(
+    () => budget?.amount && remainingBudget < 0,
+    [remainingBudget, budget]
+  );
   const isNearBudget = useMemo(
-    () => budgetUsagePercentage >= 80 && budgetUsagePercentage < 100,
-    [budgetUsagePercentage]
+    () =>
+      budget?.amount &&
+      budgetUsagePercentage >= 80 &&
+      budgetUsagePercentage < 100,
+    [budgetUsagePercentage, budget]
   );
 
-  // Load data from localStorage on mount
+  // Initialize temp budget when database budget loads or dialog opens
   useEffect(() => {
-    try {
-      const savedExpenses = localStorage.getItem(STORAGE_KEYS.EXPENSES);
-      const savedBudget = localStorage.getItem(STORAGE_KEYS.BUDGET);
-
-      if (savedExpenses) {
-        const parsedExpenses = JSON.parse(savedExpenses);
-        // Convert date strings back to Date objects
-        const expensesWithDates = parsedExpenses.map((expense: any) => ({
-          ...expense,
-          createdAt: new Date(expense.createdAt),
-          updatedAt: new Date(expense.updatedAt),
-        }));
-        setExpenses(expensesWithDates);
-      }
-
-      if (savedBudget) {
-        const budgetValue = Number(savedBudget);
-        if (!isNaN(budgetValue) && budgetValue > 0) {
-          setBudget(budgetValue);
-          setTempBudget(budgetValue);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading data from localStorage:", error);
-      toast({
-        title: "⚠️ Data Load Error",
-        description:
-          "Failed to load saved data. Starting with default values. Your data may be corrupted.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoaded(true);
+    if (budget && !tempBudget) {
+      setTempBudget(budget.amount);
     }
-  }, [toast]);
+  }, [budget, tempBudget]);
 
-  // Save to localStorage whenever expenses or budget change
+  // Update tempBudget when budget dialog opens
   useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
-        localStorage.setItem(STORAGE_KEYS.BUDGET, budget.toString());
-      } catch (error) {
-        console.error("Error saving to localStorage:", error);
-        toast({
-          title: "⚠️ Save Warning",
-          description:
-            "Failed to save data to browser storage. Please check your browser storage settings or try clearing some space.",
-          variant: "destructive",
-        });
-      }
+    if (isBudgetDialogOpen) {
+      setTempBudget(budget?.amount || 0);
     }
-  }, [expenses, budget, isLoaded, toast]);
+  }, [isBudgetDialogOpen, budget]);
 
-  // Check budget status and show alert if needed
+  // No migration needed - starting fresh
   useEffect(() => {
-    if (isLoaded && totalSpent > budget) {
+    // Just mark as ready when initialized
+    if (isInitialized && !isLoading) {
+      console.log("App initialized and ready for fresh data entry");
+    }
+  }, [isInitialized, isLoading]);
+
+  // Check budget status and show alert if needed (only if budget is set)
+  useEffect(() => {
+    if (
+      isInitialized &&
+      !isLoading &&
+      budget?.amount &&
+      totalSpent > budgetAmount
+    ) {
       setShowBudgetAlert(true);
-    } else if (isLoaded && totalSpent <= budget) {
+    } else if (isInitialized && !isLoading) {
       setShowBudgetAlert(false);
     }
-  }, [isLoaded, totalSpent, budget]);
+  }, [isInitialized, isLoading, totalSpent, budgetAmount, budget]);
 
   // Budget management
-  const handleBudgetUpdate = useCallback(() => {
-    if (tempBudget <= 0) {
+  const handleBudgetUpdate = useCallback(async () => {
+    if (tempBudget < 0) {
       toast({
         title: "❌ Invalid Budget",
-        description:
-          "Budget must be greater than 0. Please enter a valid amount.",
+        description: "Budget cannot be negative. Please enter a valid amount.",
         variant: "destructive",
       });
       return;
     }
 
-    setBudget(tempBudget);
-    setIsBudgetDialogOpen(false);
+    // Handle removing budget (tempBudget = 0)
+    if (tempBudget === 0) {
+      console.log("Handling budget removal - tempBudget is 0");
+      console.log("Calling removeBudget() function...");
 
-    // Check if new budget resolves the alert
-    if (totalSpent <= tempBudget) {
-      setShowBudgetAlert(false);
+      // Remove budget from database
+      const success = await removeBudget();
+      console.log("removeBudget() result:", success);
+
+      if (success) {
+        console.log(
+          "Budget removal successful, closing dialog and showing toast"
+        );
+        setIsBudgetDialogOpen(false);
+        setShowBudgetAlert(false); // Clear any budget alerts
+        toast({
+          title: "🗑️ Budget Removed",
+          description:
+            "Your budget has been removed. You can set a new one anytime.",
+        });
+      } else {
+        console.log("Budget removal failed");
+        toast({
+          title: "❌ Budget Removal Failed",
+          description: "Failed to remove budget. Please try again.",
+          variant: "destructive",
+        });
+      }
+      return;
     }
 
-    const budgetChange = tempBudget - budget;
-    const changeText =
-      budgetChange > 0
-        ? `increased by €${budgetChange.toLocaleString()}`
-        : budgetChange < 0
-        ? `decreased by €${Math.abs(budgetChange).toLocaleString()}`
-        : "remains the same";
+    // Handle setting/updating budget
+    const success = await setDatabaseBudget(tempBudget);
+    if (success) {
+      setIsBudgetDialogOpen(false);
 
-    toast({
-      title: "💰 Budget Updated Successfully!",
-      description: `Your budget has been ${changeText}. New total: €${tempBudget.toLocaleString()}`,
-    });
-  }, [tempBudget, totalSpent, budget, toast]);
+      // Check if new budget resolves the alert
+      if (totalSpent <= tempBudget) {
+        setShowBudgetAlert(false);
+      }
+
+      const budgetChange = tempBudget - (budget?.amount ?? 0);
+      const changeText =
+        budgetChange > 0
+          ? `increased by €${budgetChange.toLocaleString()}`
+          : budgetChange < 0
+          ? `decreased by €${Math.abs(budgetChange).toLocaleString()}`
+          : "remains the same";
+
+      toast({
+        title: "💰 Budget Updated Successfully!",
+        description: `Your budget has been ${changeText}. New total: €${tempBudget.toLocaleString()}`,
+      });
+    }
+  }, [tempBudget, totalSpent, budget, setDatabaseBudget, removeBudget, toast]);
 
   // Expense management
-  const updateExpense = useCallback(
-    (id: string, amount: number, category?: string) => {
+  const handleUpdateExpense = useCallback(
+    async (id: string, amount: number, category?: string) => {
       if (amount < 0) {
         toast({
           title: "❌ Invalid Amount",
@@ -226,50 +381,39 @@ export default function TravelExpensesTracker() {
           ? `decreased by €${Math.abs(amountChange).toLocaleString()}`
           : "remains the same";
 
-      setExpenses((prev) =>
-        prev.map((expense) =>
-          expense.id === id
-            ? {
-                ...expense,
-                amount,
-                category: category ? category.trim() : expense.category,
-                updatedAt: new Date(),
-              }
-            : expense
-        )
-      );
+      const success = await updateExpense(id, amount, category);
+      if (success) {
+        // Check budget after update (only if budget is set)
+        if (budget?.amount) {
+          const newTotalSpent = totalSpent - oldAmount + amount;
 
-      // Check budget after update
-      const newTotalSpent = expenses.reduce(
-        (sum, exp) => (exp.id === id ? sum + amount : sum + exp.amount),
-        0
-      );
+          if (newTotalSpent > budgetAmount) {
+            setShowBudgetAlert(true);
+            toast({
+              title: "⚠️ Budget Exceeded!",
+              description: `You've exceeded your budget by €${(
+                newTotalSpent - budgetAmount
+              ).toLocaleString()}. Consider adjusting your budget or reducing expenses.`,
+              variant: "destructive",
+            });
+          }
+        }
 
-      if (newTotalSpent > budget) {
-        setShowBudgetAlert(true);
+        const updateMessage = category
+          ? `Expense "${category.trim()}" updated successfully! Amount ${changeText}.`
+          : `Expense amount updated successfully! ${changeText}.`;
+
         toast({
-          title: "⚠️ Budget Exceeded!",
-          description: `You've exceeded your budget by €${(
-            newTotalSpent - budget
-          ).toLocaleString()}. Consider adjusting your budget or reducing expenses.`,
-          variant: "destructive",
+          title: "✏️ Expense Updated!",
+          description: updateMessage,
         });
       }
-
-      const updateMessage = category
-        ? `Expense "${category.trim()}" updated successfully! Amount ${changeText}.`
-        : `Expense amount updated successfully! ${changeText}.`;
-
-      toast({
-        title: "✏️ Expense Updated!",
-        description: updateMessage,
-      });
     },
-    [expenses, budget, toast]
+    [expenses, budgetAmount, totalSpent, updateExpense, toast]
   );
 
-  const addExpense = useCallback(
-    (category: string, amount: number) => {
+  const handleAddExpense = useCallback(
+    async (category: string, amount: number) => {
       if (!category.trim()) {
         toast({
           title: "❌ Invalid Category",
@@ -290,64 +434,75 @@ export default function TravelExpensesTracker() {
         return;
       }
 
-      const newExpense: Expense = {
-        id: Date.now().toString(),
-        category: category.trim(),
-        amount,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      setExpenses((prev) => [...prev, newExpense]);
-
-      // Check budget after adding
-      const newTotalSpent = totalSpent + amount;
-      if (newTotalSpent > budget) {
-        setShowBudgetAlert(true);
-        toast({
-          title: "⚠️ Budget Exceeded!",
-          description: `You've exceeded your budget by €${(
-            newTotalSpent - budget
-          ).toLocaleString()}. Consider adjusting your budget or reducing expenses.`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "✅ New Expense Added!",
-          description: `Successfully added "${category.trim()}" for €${amount.toLocaleString()}. You have €${(
-            budget - newTotalSpent
-          ).toLocaleString()} remaining.`,
-        });
+      const success = await addExpense(category.trim(), amount);
+      if (success) {
+        // Check budget after adding (only if budget is set)
+        if (budget?.amount) {
+          const newTotalSpent = totalSpent + amount;
+          if (newTotalSpent > budgetAmount) {
+            setShowBudgetAlert(true);
+            toast({
+              title: "⚠️ Budget Exceeded!",
+              description: `You've exceeded your budget by €${(
+                newTotalSpent - budgetAmount
+              ).toLocaleString()}. Consider adjusting your budget or reducing expenses.`,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "✅ New Expense Added!",
+              description: `Successfully added "${category.trim()}" for €${amount.toLocaleString()}. You have €${(
+                budgetAmount - newTotalSpent
+              ).toLocaleString()} remaining.`,
+            });
+          }
+        } else {
+          // No budget set - just show success message
+          toast({
+            title: "✅ New Expense Added!",
+            description: `Successfully added "${category.trim()}" for €${amount.toLocaleString()}.`,
+          });
+        }
       }
     },
-    [totalSpent, budget, toast]
+    [totalSpent, budgetAmount, addExpense, toast]
   );
 
-  const deleteExpense = useCallback(
-    (id: string) => {
+  const handleDeleteExpense = useCallback(
+    async (id: string) => {
       const expenseToDelete = expenses.find((exp) => exp.id === id);
-      setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+      const success = await deleteExpense(id);
 
-      if (expenseToDelete) {
-        const newTotalSpent = totalSpent - expenseToDelete.amount;
-        const remainingText =
-          newTotalSpent <= budget
-            ? `You now have €${(
-                budget - newTotalSpent
-              ).toLocaleString()} remaining.`
-            : `You're still over budget by €${(
-                newTotalSpent - budget
-              ).toLocaleString()}.`;
+      if (success && expenseToDelete) {
+        if (budget?.amount) {
+          const newTotalSpent = totalSpent - expenseToDelete.amount;
+          const remainingText =
+            newTotalSpent <= budgetAmount
+              ? `You now have €${(
+                  budgetAmount - newTotalSpent
+                ).toLocaleString()} remaining.`
+              : `You're still over budget by €${(
+                  newTotalSpent - budgetAmount
+                ).toLocaleString()}.`;
 
-        toast({
-          title: "🗑️ Expense Deleted!",
-          description: `"${
-            expenseToDelete.category
-          }" (€${expenseToDelete.amount.toLocaleString()}) has been removed. ${remainingText}`,
-        });
+          toast({
+            title: "🗑️ Expense Deleted!",
+            description: `"${
+              expenseToDelete.category
+            }" (€${expenseToDelete.amount.toLocaleString()}) has been removed. ${remainingText}`,
+          });
+        } else {
+          // No budget set - just show deletion message
+          toast({
+            title: "🗑️ Expense Deleted!",
+            description: `"${
+              expenseToDelete.category
+            }" (€${expenseToDelete.amount.toLocaleString()}) has been removed.`,
+          });
+        }
       }
     },
-    [expenses, totalSpent, budget, toast]
+    [expenses, totalSpent, budgetAmount, deleteExpense, toast]
   );
 
   // Export functionality
@@ -372,21 +527,35 @@ export default function TravelExpensesTracker() {
 
           // Create summary worksheet
           const summaryData = [
-            { Metric: "Total Budget", Value: `€${budget.toLocaleString()}` },
-            { Metric: "Total Spent", Value: `€${totalSpent.toLocaleString()}` },
-            {
-              Metric: "Remaining Budget",
-              Value: `€${remainingBudget.toLocaleString()}`,
-            },
-            { Metric: "Budget Usage", Value: `${budgetUsagePercentage}%` },
             {
               Metric: "Budget Status",
-              Value: isOverBudget
-                ? "EXCEEDED"
-                : isNearBudget
-                ? "WARNING"
-                : "GOOD",
+              Value: budget?.amount ? "Set" : "Not Set",
             },
+            ...(budget?.amount
+              ? [
+                  {
+                    Metric: "Total Budget",
+                    Value: `€${budgetAmount.toLocaleString()}`,
+                  },
+                  {
+                    Metric: "Remaining Budget",
+                    Value: `€${remainingBudget.toLocaleString()}`,
+                  },
+                  {
+                    Metric: "Budget Usage",
+                    Value: `${budgetUsagePercentage}%`,
+                  },
+                  {
+                    Metric: "Budget Status",
+                    Value: isOverBudget
+                      ? "EXCEEDED"
+                      : isNearBudget
+                      ? "WARNING"
+                      : "GOOD",
+                  },
+                ]
+              : []),
+            { Metric: "Total Spent", Value: `€${totalSpent.toLocaleString()}` },
             { Metric: "Total Expenses", Value: expenses.length },
             { Metric: "Export Date", Value: new Date().toLocaleDateString() },
           ];
@@ -457,10 +626,10 @@ export default function TravelExpensesTracker() {
         } else {
           // JSON export (existing functionality)
           const data = {
-            budget,
+            budget: budget?.amount ? budgetAmount : null,
             expenses,
             totalSpent,
-            remainingBudget,
+            remainingBudget: budget?.amount ? remainingBudget : null,
             exportDate: new Date().toISOString(),
           };
 
@@ -496,23 +665,72 @@ export default function TravelExpensesTracker() {
       }
     },
     [
-      budget,
+      budgetAmount,
       expenses,
       totalSpent,
       remainingBudget,
       budgetUsagePercentage,
+      budget,
       toast,
     ]
   );
 
-  if (!isLoaded) {
+  // Show auth form if user is not authenticated
+  if (!user && !authLoading) {
+    return <AuthForm />;
+  }
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="text-lg text-slate-700">Initializing...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (shouldShowDatabaseLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <div className="text-lg text-slate-700">
-            Loading your travel expenses...
+            {isSwitchingProfile
+              ? "Switching travel profiles..."
+              : "Loading your travel expenses..."}
           </div>
+          {isSwitchingProfile && (
+            <p className="text-sm text-slate-500">
+              Please wait while we load data for the new profile...
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Show message when no travel profile is selected
+  if (user && !selectedTravelProfile && !isLoadingProfiles) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center space-y-6 max-w-md mx-auto p-6">
+          <Plane className="h-16 w-16 text-blue-600 mx-auto" />
+          <h2 className="text-2xl font-bold text-slate-900">
+            No Travel Profile Selected
+          </h2>
+          <p className="text-slate-600">
+            Please select a travel profile to start tracking expenses, or create
+            a new one.
+          </p>
+          <Button
+            onClick={() => window.open("/sharing", "_blank")}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Manage Travel Profiles
+          </Button>
         </div>
       </div>
     );
@@ -523,62 +741,137 @@ export default function TravelExpensesTracker() {
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="flex items-center justify-center space-x-3">
-            <div className="hidden md:block p-3 bg-blue-100 rounded-full">
-              <Plane className="h-8 w-8 text-blue-600" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex-1"></div>
+            <div className="flex items-center justify-center space-x-3">
+              <div className="hidden md:block p-3 bg-blue-100 rounded-full">
+                <Plane className="h-8 w-8 text-blue-600" />
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                Travel Expenses Tracker
+              </h1>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-              Travel Expenses Tracker
-            </h1>
+            <div className="flex-1 flex justify-end">
+              <UserProfile />
+            </div>
           </div>
           <p className="text-slate-700 text-lg max-w-2xl mx-auto">
             Smart budget management for your travels. Track expenses, visualize
             spending patterns, and stay within budget.
           </p>
-
-          {/* Export Buttons */}
-          <div className="flex justify-center space-x-3">
-            {/* <Button
-              onClick={() => exportData("json")}
-              disabled={isExporting}
-              variant="outline"
-              className="border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400"
-            >
-              {isExporting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <Euro className="h-4 w-4 mr-2" />
-                  Export JSON
-                </>
-              )}
-            </Button> */}
-            <Button
-              onClick={() => exportData("excel")}
-              disabled={isExporting}
-              variant="outline"
-              className="border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400"
-            >
-              {isExporting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <Euro className="h-4 w-4 mr-2" />
-                  Export Excel
-                </>
-              )}
-            </Button>
-          </div>
         </div>
 
-        {/* Budget Alert Banner */}
-        {showBudgetAlert && (
+        {/* Travel Profile Selector */}
+        {/* {user && travelProfiles.length > 0 && (
+          <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-slate-900 flex items-center space-x-2">
+                <Plane className="h-5 w-5 text-blue-600" />
+                <span>Travel Profile</span>
+              </h2>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadData && loadData()}
+                  disabled={isLoading || isSwitchingProfile}
+                  className="text-green-600 border-green-300 hover:bg-green-50"
+                >
+                  <div className="h-4 w-4 mr-2">
+                    {isLoading || isSwitchingProfile ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                    ) : (
+                      <div className="h-4 w-4">🔄</div>
+                    )}
+                  </div>
+                  Refresh
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open("/sharing", "_blank")}
+                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                >
+                  Manage Profiles
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <Label
+                htmlFor="profile-select"
+                className="text-sm font-medium text-slate-700"
+              >
+                Select Profile:
+              </Label>
+              <select
+                id="profile-select"
+                value={selectedTravelProfile || ""}
+                onChange={(e) =>
+                  handleTravelProfileChange(e.target.value || null)
+                }
+                disabled={isSwitchingProfile}
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50"
+              >
+                {travelProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}{" "}
+                    {profile.owner_id === user?.id ? "(Owner)" : "(Member)"}
+                  </option>
+                ))}
+              </select>
+              {isSwitchingProfile && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              )}
+            </div>
+            {selectedTravelProfile && (
+              <div className="mt-3">
+                <p className="text-sm text-slate-600">
+                  Currently tracking expenses for:{" "}
+                  <strong className="text-blue-600">
+                    {
+                      travelProfiles.find((p) => p.id === selectedTravelProfile)
+                        ?.name
+                    }
+                  </strong>
+                </p>
+                {(isLoading || isSwitchingProfile) && (
+                  <p className="text-xs text-blue-600 mt-1 flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+                    {isSwitchingProfile
+                      ? "Switching profiles..."
+                      : "Loading data..."}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )} */}
+
+        {/* No Travel Profiles Message */}
+        {user && travelProfiles.length === 0 && !isLoadingProfiles && (
+          <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-6">
+            <div className="text-center py-6">
+              <Plane className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">
+                No Travel Profiles Yet
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Create a travel profile to start collaborating with others on
+                expenses.
+              </p>
+              <Button
+                onClick={() => window.open("/sharing", "_blank")}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Create Your First Profile
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Budget Alert Banner - Only show if budget is set */}
+        {budget?.amount && showBudgetAlert && (
           <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg p-4 shadow-lg animate-pulse">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -606,8 +899,8 @@ export default function TravelExpensesTracker() {
           </div>
         )}
 
-        {/* Near Budget Warning */}
-        {!showBudgetAlert && isNearBudget && (
+        {/* Near Budget Warning - Only show if budget is set */}
+        {budget?.amount && !showBudgetAlert && isNearBudget && (
           <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-4 shadow-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -637,7 +930,7 @@ export default function TravelExpensesTracker() {
         {/* Travel Countdown */}
         <div className="flex justify-center">
           <div className="w-full max-w-2xl">
-            <TravelCountdown />
+            <TravelCountdown travelProfileId={selectedTravelProfile || ""} />
           </div>
         </div>
 
@@ -666,7 +959,7 @@ export default function TravelExpensesTracker() {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Update Budget</DialogTitle>
+                      <DialogTitle>Set Budget (Optional)</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
@@ -678,22 +971,45 @@ export default function TravelExpensesTracker() {
                           onChange={(e) =>
                             setTempBudget(Number(e.target.value))
                           }
-                          placeholder="Enter budget amount"
+                          placeholder="Enter budget amount (optional)"
                           min="0"
                           step="0.01"
                           className="text-lg"
                         />
+                        <p className="text-xs text-slate-500">
+                          Leave empty if you don't want to set a budget
+                        </p>
                       </div>
-                      <div className="flex justify-end space-x-2">
+                      <div className="flex justify-between items-center">
                         <Button
                           variant="outline"
-                          onClick={() => setIsBudgetDialogOpen(false)}
+                          onClick={async () => {
+                            console.log("Remove Budget button clicked!");
+                            console.log("Current budget:", budget);
+                            console.log("Calling removeBudget directly...");
+
+                            const success = await removeBudget();
+                            if (success) {
+                              setIsBudgetDialogOpen(false);
+                              setShowBudgetAlert(false);
+                            }
+                          }}
+                          className="text-red-600 border-red-300 hover:bg-red-50"
                         >
-                          Cancel
+                          Remove Budget
                         </Button>
-                        <Button onClick={handleBudgetUpdate}>
-                          Update Budget
-                        </Button>
+
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsBudgetDialogOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button onClick={handleBudgetUpdate}>
+                            {budget ? "Update Budget" : "Set Budget"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </DialogContent>
@@ -701,12 +1017,25 @@ export default function TravelExpensesTracker() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-900">
-                €{budget.toLocaleString()}
-              </div>
-              <p className="text-xs text-blue-700 mt-1">
-                Customizable travel budget
-              </p>
+              {budget?.amount ? (
+                <>
+                  <div className="text-3xl font-bold text-blue-900">
+                    €{budgetAmount.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Customizable travel budget
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-medium text-slate-600">
+                    No Budget Set
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Click settings to set a budget (optional)
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -723,7 +1052,9 @@ export default function TravelExpensesTracker() {
                 €{totalSpent.toLocaleString()}
               </div>
               <p className="text-xs text-orange-700 mt-1">
-                {budgetUsagePercentage}% of budget used
+                {budget?.amount
+                  ? `${budgetUsagePercentage}% of budget used`
+                  : `${expenses.length} expense categories`}
               </p>
             </CardContent>
           </Card>
@@ -731,7 +1062,9 @@ export default function TravelExpensesTracker() {
           {/* Remaining Budget Card */}
           <Card
             className={`bg-gradient-to-br ${
-              isOverBudget
+              !budget?.amount
+                ? "from-slate-50 to-slate-100 border-slate-200"
+                : isOverBudget
                 ? "from-red-50 to-red-100 border-red-200"
                 : isNearBudget
                 ? "from-yellow-50 to-amber-100 border-yellow-200"
@@ -741,17 +1074,21 @@ export default function TravelExpensesTracker() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle
                 className={`text-sm font-medium ${
-                  isOverBudget
+                  !budget?.amount
+                    ? "text-slate-800"
+                    : isOverBudget
                     ? "text-red-800"
                     : isNearBudget
-                    ? "text-amber-800"
+                    ? "text-amber-700"
                     : "text-emerald-800"
                 }`}
               >
-                Remaining Budget
+                {budget?.amount ? "Remaining Budget" : "Budget Status"}
               </CardTitle>
               <div className="flex items-center space-x-2">
-                {isOverBudget ? (
+                {!budget?.amount ? (
+                  <Wallet className="h-4 w-4 text-slate-700" />
+                ) : isOverBudget ? (
                   <AlertTriangle className="h-4 w-4 text-red-700" />
                 ) : isNearBudget ? (
                   <AlertTriangle className="h-4 w-4 text-amber-700" />
@@ -761,89 +1098,103 @@ export default function TravelExpensesTracker() {
               </div>
             </CardHeader>
             <CardContent>
-              <div
-                className={`text-3xl font-bold ${
-                  isOverBudget
-                    ? "text-red-900"
-                    : isNearBudget
-                    ? "text-amber-900"
-                    : "text-emerald-900"
-                }`}
-              >
-                €{remainingBudget.toLocaleString()}
-              </div>
-              <p
-                className={`text-xs mt-1 ${
-                  isOverBudget
-                    ? "text-red-700 font-semibold"
-                    : isNearBudget
-                    ? "text-amber-700"
-                    : "text-emerald-700"
-                }`}
-              >
-                {isOverBudget
-                  ? `⚠️ Over budget by €${Math.abs(
-                      remainingBudget
-                    ).toLocaleString()}`
-                  : isNearBudget
-                  ? "⚠️ Near budget limit"
-                  : "✅ Within budget"}
-              </p>
+              {budget?.amount ? (
+                <>
+                  <div
+                    className={`text-3xl font-bold ${
+                      isOverBudget
+                        ? "text-red-900"
+                        : isNearBudget
+                        ? "text-amber-900"
+                        : "text-emerald-900"
+                    }`}
+                  >
+                    €{remainingBudget.toLocaleString()}
+                  </div>
+                  <p
+                    className={`text-xs mt-1 ${
+                      isOverBudget
+                        ? "text-red-700 font-semibold"
+                        : isNearBudget
+                        ? "text-amber-700"
+                        : "text-emerald-700"
+                    }`}
+                  >
+                    {isOverBudget
+                      ? `⚠️ Over budget by €${Math.abs(
+                          remainingBudget
+                        ).toLocaleString()}`
+                      : isNearBudget
+                      ? "⚠️ Near budget limit"
+                      : "✅ Within budget"}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-medium text-slate-700">
+                    No Budget Set
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Set a budget to track spending
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Budget Progress Bar */}
-        <Card className="bg-white shadow-lg border-slate-200">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              {/* Progress Header */}
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-slate-800">
-                  Budget Progress
-                </h3>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <div className="text-sm text-slate-600">Used</div>
-                    <div className="font-bold text-lg text-slate-900">
-                      {budgetUsagePercentage}%
+        {/* Budget Progress Bar - Only show if budget is set */}
+        {budget?.amount && (
+          <Card className="bg-white shadow-lg border-slate-200">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {/* Progress Header */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-slate-800">
+                    Budget Progress
+                  </h3>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className="text-sm text-slate-600">Used</div>
+                      <div className="font-bold text-lg text-slate-900">
+                        {budgetUsagePercentage}%
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-slate-600">Remaining</div>
+                      <div className="font-bold text-lg text-slate-900">
+                        {Math.max(100 - budgetUsagePercentage, 0)}%
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-slate-600">Remaining</div>
-                    <div className="font-bold text-lg text-slate-900">
-                      {Math.max(100 - budgetUsagePercentage, 0)}%
-                    </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="space-y-2">
+                  <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
+                    <div
+                      className={`h-4 rounded-full transition-all duration-500 ${
+                        isOverBudget
+                          ? "bg-red-500"
+                          : isNearBudget
+                          ? "bg-amber-500"
+                          : "bg-emerald-500"
+                      }`}
+                      style={{
+                        width: `${Math.min(budgetUsagePercentage, 100)}%`,
+                      }}
+                    ></div>
+                  </div>
+
+                  {/* Progress Labels */}
+                  <div className="flex justify-between text-xs text-slate-600">
+                    <span>€0</span>
+                    <span>€{budgetAmount.toLocaleString()}</span>
                   </div>
                 </div>
-              </div>
 
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
-                  <div
-                    className={`h-4 rounded-full transition-all duration-500 ${
-                      isOverBudget
-                        ? "bg-red-500"
-                        : isNearBudget
-                        ? "bg-amber-500"
-                        : "bg-emerald-500"
-                    }`}
-                    style={{
-                      width: `${Math.min(budgetUsagePercentage, 100)}%`,
-                    }}
-                  ></div>
-                </div>
-
-                {/* Progress Labels */}
-                <div className="flex justify-between text-xs text-slate-600">
-                  <span>€0</span>
-                  <span>€{budget.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Detailed Progress Stats */}
-              {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                {/* Detailed Progress Stats */}
+                {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
                 <div className="text-center p-3 bg-slate-50 rounded-lg">
                   <div className="text-2xl font-bold text-slate-800">
                     €{totalSpent.toLocaleString()}
@@ -874,38 +1225,39 @@ export default function TravelExpensesTracker() {
                 </div>
               </div> */}
 
-              {/* Budget Status Indicator */}
-              <div className="flex justify-center">
-                <div
-                  className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-                    isOverBudget
-                      ? "bg-red-100 text-red-800 border border-red-200"
-                      : isNearBudget
-                      ? "bg-amber-100 text-amber-800 border border-amber-200"
-                      : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                  }`}
-                >
-                  {isOverBudget ? (
-                    <>
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Budget Exceeded
-                    </>
-                  ) : isNearBudget ? (
-                    <>
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Near Budget Limit
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Within Budget
-                    </>
-                  )}
+                {/* Budget Status Indicator */}
+                <div className="flex justify-center">
+                  <div
+                    className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
+                      isOverBudget
+                        ? "bg-red-100 text-red-800 border border-red-200"
+                        : isNearBudget
+                        ? "bg-amber-100 text-amber-800 border border-amber-200"
+                        : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    }`}
+                  >
+                    {isOverBudget ? (
+                      <>
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        Budget Exceeded
+                      </>
+                    ) : isNearBudget ? (
+                      <>
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        Near Budget Limit
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Within Budget
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -913,9 +1265,9 @@ export default function TravelExpensesTracker() {
           <div className="space-y-6">
             <ExpenseTable
               expenses={expenses}
-              onUpdateExpense={updateExpense}
-              onAddExpense={addExpense}
-              onDeleteExpense={deleteExpense}
+              onUpdateExpense={handleUpdateExpense}
+              onAddExpense={handleAddExpense}
+              onDeleteExpense={handleDeleteExpense}
             />
           </div>
 
@@ -924,6 +1276,60 @@ export default function TravelExpensesTracker() {
             <ExpenseCharts expenses={expenses} />
           </div>
         </div>
+        {/* Export Buttons */}
+        <div className="flex justify-center space-x-3">
+          {/* <Button
+              onClick={() => exportData("json")}
+              disabled={isExporting}
+              variant="outline"
+              className="border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400"
+            >
+              {isExporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Euro className="h-4 w-4 mr-2" />
+                  Export JSON
+                </>
+              )}
+            </Button> */}
+          <Button
+            onClick={() => exportData("excel")}
+            disabled={isExporting}
+            variant="outline"
+            className="border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400"
+          >
+            {isExporting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Euro className="h-4 w-4 mr-2" />
+                Export Excel
+              </>
+            )}
+          </Button>
+        </div>
+        {/* Debug Information (Development Only) */}
+        {process.env.NODE_ENV === "development" && user && (
+          <div className="bg-slate-100 rounded-lg border border-slate-300 p-4 text-xs">
+            <h3 className="font-semibold mb-2">Debug Info:</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div>Selected Profile: {selectedTravelProfile || "None"}</div>
+              <div>Profile Count: {travelProfiles.length}</div>
+              <div>Expenses: {expenses.length}</div>
+              <div>Budget: {budget ? `€${budget.amount}` : "None"}</div>
+              <div>Loading: {isLoading ? "Yes" : "No"}</div>
+              <div>Initialized: {isInitialized ? "Yes" : "No"}</div>
+              <div>Switching: {isSwitchingProfile ? "Yes" : "No"}</div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
