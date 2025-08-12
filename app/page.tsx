@@ -22,6 +22,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import {
   AlertTriangle,
+  BarChart3,
   CheckCircle,
   Euro,
   Plane,
@@ -1034,13 +1035,13 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                       />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="bg-white border-slate-200">
                     <DialogHeader>
-                      <DialogTitle>Set Budget (Optional)</DialogTitle>
+                      <DialogTitle className="text-slate-900">Set Budget (Optional)</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="budget">Budget Amount (€)</Label>
+                        <Label htmlFor="budget" className="text-slate-700 font-medium">Budget Amount (€)</Label>
                         <Input
                           id="budget"
                           type="number"
@@ -1051,7 +1052,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                           placeholder="Enter budget amount (optional)"
                           min="0"
                           step="0.01"
-                          className="text-lg"
+                          className="text-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                         />
                         <p className="text-xs text-slate-500">
                           Leave empty if you don't want to set a budget
@@ -1071,7 +1072,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                               setShowBudgetAlert(false);
                             }
                           }}
-                          className="text-red-600 border-red-300 hover:bg-red-50"
+                          className="text-red-600 border-red-300 hover:bg-red-50 bg-white"
                         >
                           Remove Budget
                         </Button>
@@ -1080,10 +1081,11 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                           <Button
                             variant="outline"
                             onClick={() => setIsBudgetDialogOpen(false)}
+                            className="border-slate-300 text-slate-700 hover:bg-slate-50 bg-white"
                           >
                             Cancel
                           </Button>
-                          <Button onClick={stableHandleBudgetUpdate}>
+                          <Button onClick={stableHandleBudgetUpdate} className="bg-blue-600 hover:bg-blue-700">
                             {budget ? "Update Budget" : "Set Budget"}
                           </Button>
                         </div>
@@ -1414,9 +1416,15 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
 
           {/* Charts */}
           <div className="space-y-6">
-            {/* Expense Charts */}
+            {/* Expense Analytics */}
             {user && isInitialized && !isLoading && expenses.length > 0 && (
-              <div className="mb-8">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-slate-900 flex items-center space-x-2">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    <span>Expense Analytics</span>
+                  </h2>
+                </div>
                 <ExpenseCharts
                   key={`charts-${selectedTravelProfile || "personal"}`}
                   expenses={expenses}
@@ -1425,26 +1433,9 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
             )}
           </div>
         </div>
+
         {/* Export Buttons */}
         <div className="flex justify-center space-x-3">
-          {/* <Button
-                onClick={() => exportData("json")}
-                disabled={isExporting}
-                variant="outline"
-                className="border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400"
-              >
-                {isExporting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Euro className="h-4 w-4 mr-2" />
-                    Export JSON
-                  </>
-                )}
-              </Button> */}
           <Button
             onClick={() => exportData("excel")}
             disabled={isExporting}
@@ -1464,6 +1455,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
             )}
           </Button>
         </div>
+
         {/* Debug Information (Development Only) */}
         {process.env.NODE_ENV === "development" && user && (
           <div className="bg-slate-100 rounded-lg border border-slate-300 p-4 text-xs">

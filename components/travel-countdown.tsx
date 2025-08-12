@@ -397,9 +397,9 @@ export const TravelCountdown = memo(function TravelCountdown({
 
       {/* Edit Dialog */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200">
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
+            <DialogTitle className="flex items-center space-x-2 text-slate-900">
               <Calendar className="h-5 w-5 text-emerald-600" />
               <span>Update Travel Date</span>
             </DialogTitle>
@@ -454,7 +454,7 @@ export const TravelCountdown = memo(function TravelCountdown({
                   setTempDate("");
                   setTempTime("12:00");
                 }}
-                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 bg-white"
               >
                 Cancel
               </Button>

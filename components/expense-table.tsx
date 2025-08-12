@@ -549,13 +549,13 @@ export const ExpenseTable = memo(function ExpenseTable({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-white border-slate-200">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-red-600">
               <Trash2 className="h-5 w-5" />
               <span>Delete Expense</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-700">
               Are you sure you want to delete "{expenseToDelete?.category}" with
               amount €{expenseToDelete?.amount?.toLocaleString()}? This action
               cannot be undone.
@@ -565,7 +565,7 @@ export const ExpenseTable = memo(function ExpenseTable({
             <Button
               variant="outline"
               onClick={cancelDelete}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </Button>

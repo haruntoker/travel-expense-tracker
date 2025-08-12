@@ -77,9 +77,9 @@ export const SettingsModal = memo(function SettingsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md bg-white border-slate-200">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
+          <DialogTitle className="flex items-center space-x-2 text-slate-900">
             <Settings className="h-5 w-5 text-blue-600" />
             <span>Settings</span>
           </DialogTitle>
@@ -95,7 +95,7 @@ export const SettingsModal = memo(function SettingsModal({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="notifications" className="text-sm">
+                <Label htmlFor="notifications" className="text-sm text-slate-700">
                   Enable notifications
                 </Label>
                 <Switch
@@ -106,7 +106,7 @@ export const SettingsModal = memo(function SettingsModal({
               </div>
 
               <div className="flex items-center justify-between">
-                <Label htmlFor="budget-alerts" className="text-sm">
+                <Label htmlFor="budget-alerts" className="text-sm text-slate-700">
                   Budget alerts
                 </Label>
                 <Switch
@@ -125,28 +125,30 @@ export const SettingsModal = memo(function SettingsModal({
               <span>Appearance</span>
             </h3>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="dark-mode" className="text-sm">
-                Dark mode
-              </Label>
-              <Switch
-                id="dark-mode"
-                checked={darkMode}
-                onCheckedChange={setDarkMode}
-              />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="dark-mode" className="text-sm text-slate-700">
+                  Dark mode
+                </Label>
+                <Switch
+                  id="dark-mode"
+                  checked={darkMode}
+                  onCheckedChange={setDarkMode}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Privacy Section */}
+          {/* Data Section */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
-              <Shield className="h-4 w-4 text-slate-500" />
-              <span>Privacy & Data</span>
+              <Database className="h-4 w-4 text-slate-500" />
+              <span>Data</span>
             </h3>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="data-export" className="text-sm">
+                <Label htmlFor="data-export" className="text-sm text-slate-700">
                   Allow data export
                 </Label>
                 <Switch
@@ -155,37 +157,43 @@ export const SettingsModal = memo(function SettingsModal({
                   onCheckedChange={setDataExport}
                 />
               </div>
+            </div>
+          </div>
 
-              <div className="p-3 bg-slate-50 rounded-md border">
-                <div className="flex items-center space-x-2 text-xs text-slate-600">
-                  <Database className="h-3 w-3" />
-                  <span>Your data is stored securely and privately</span>
+          {/* Privacy Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+              <Shield className="h-4 w-4 text-slate-500" />
+              <span>Privacy</span>
+            </h3>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="data-visibility" className="text-sm text-slate-700">
+                  Data visibility
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Eye className="h-4 w-4 text-slate-500" />
+                  <span className="text-sm text-slate-600">Private</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Account Info */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
-              <Eye className="h-4 w-4 text-slate-500" />
-              <span>Account Information</span>
-            </h3>
-
-            <div className="p-3 bg-slate-50 rounded-md border space-y-2">
-              <div className="text-xs text-slate-600">
-                <strong>Email:</strong> {user.email}
-              </div>
-              <div className="text-xs text-slate-600">
-                <strong>Member since:</strong>{" "}
-                {new Date(user.created_at).toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-
           {/* Action Buttons */}
-          <div className="flex space-x-3">
-            <Button onClick={handleSave} disabled={isSaving} className="flex-1">
+          <div className="flex space-x-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              Reset
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
               {isSaving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -194,12 +202,9 @@ export const SettingsModal = memo(function SettingsModal({
               ) : (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  Save Settings
+                  Save
                 </>
               )}
-            </Button>
-            <Button variant="outline" onClick={handleReset} className="flex-1">
-              Reset
             </Button>
           </div>
         </div>

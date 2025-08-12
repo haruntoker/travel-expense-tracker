@@ -168,67 +168,76 @@ export const ProfileModal = memo(function ProfileModal({
     });
   };
 
+  const getUserInitials = (email: string) => {
+    const parts = email.split("@");
+    if (parts.length === 0) return "";
+    const name = parts[0];
+    if (name.length === 0) return "";
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md bg-white border-slate-200">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
+          <DialogTitle className="flex items-center space-x-2 text-slate-900">
             <User className="h-5 w-5 text-blue-600" />
             <span>User Profile</span>
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-6">
-          {/* Profile Picture Section */}
-          <div className="text-center">
-            <div className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-3 overflow-hidden">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-2xl font-bold text-blue-600">
-                  {user.email?.substring(0, 2).toUpperCase()}
-                </span>
+          {/* Profile Photo */}
+          <div className="flex flex-col items-center space-y-4">
+            <div className="relative">
+              <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Profile"
+                    className="h-20 w-20 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl font-semibold text-blue-600">
+                    {getUserInitials(user.email || "")}
+                  </span>
+                )}
+              </div>
+              {isEditing && (
+                <div className="absolute -bottom-2 -right-2">
+                  <input
+                    type="file"
+                    id="photo-upload"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <label htmlFor="photo-upload">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs cursor-pointer bg-white border-slate-300 hover:bg-slate-50"
+                      disabled={isUploadingPhoto}
+                    >
+                      {isUploadingPhoto ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                          Uploading...
+                        </>
+                      ) : (
+                        "Change Photo"
+                      )}
+                    </Button>
+                  </label>
+                </div>
               )}
             </div>
-            {isEditing ? (
-              <div className="space-y-2">
-                <input
-                  type="file"
-                  id="photo-upload"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-                <label htmlFor="photo-upload">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs cursor-pointer"
-                    disabled={isUploadingPhoto}
-                  >
-                    {isUploadingPhoto ? (
-                      <>
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
-                        Uploading...
-                      </>
-                    ) : (
-                      "Change Photo"
-                    )}
-                  </Button>
-                </label>
-              </div>
-            ) : null}
           </div>
 
           {/* Profile Information */}
           <div className="space-y-4">
             {/* Display Name */}
             <div className="space-y-2">
-              <Label className="flex items-center space-x-2">
+              <Label className="flex items-center space-x-2 text-slate-700 font-medium">
                 <User className="h-4 w-4 text-slate-500" />
                 <span>Display Name</span>
               </Label>
@@ -237,9 +246,10 @@ export const ProfileModal = memo(function ProfileModal({
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Enter your display name"
+                  className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               ) : (
-                <div className="p-3 bg-slate-50 rounded-md border">
+                <div className="p-3 bg-slate-50 rounded-md border border-slate-200 text-slate-700">
                   {displayName || "Not set"}
                 </div>
               )}
@@ -247,33 +257,33 @@ export const ProfileModal = memo(function ProfileModal({
 
             {/* Email */}
             <div className="space-y-2">
-              <Label className="flex items-center space-x-2">
+              <Label className="flex items-center space-x-2 text-slate-700 font-medium">
                 <Mail className="h-4 w-4 text-slate-500" />
                 <span>Email Address</span>
               </Label>
-              <div className="p-3 bg-slate-50 rounded-md border">
+              <div className="p-3 bg-slate-50 rounded-md border border-slate-200 text-slate-700">
                 {user.email}
               </div>
             </div>
 
             {/* Account Created */}
             <div className="space-y-2">
-              <Label className="flex items-center space-x-2">
+              <Label className="flex items-center space-x-2 text-slate-700 font-medium">
                 <Calendar className="h-4 w-4 text-slate-500" />
                 <span>Account Created</span>
               </Label>
-              <div className="p-3 bg-slate-50 rounded-md border">
+              <div className="p-3 bg-slate-50 rounded-md border border-slate-200 text-slate-700">
                 {formatDate(user.created_at)}
               </div>
             </div>
 
             {/* Last Sign In */}
             <div className="space-y-2">
-              <Label className="flex items-center space-x-2">
+              <Label className="flex items-center space-x-2 text-slate-700 font-medium">
                 <Shield className="h-4 w-4 text-slate-500" />
                 <span>Last Sign In</span>
               </Label>
-              <div className="p-3 bg-slate-50 rounded-md border">
+              <div className="p-3 bg-slate-50 rounded-md border border-slate-200 text-slate-700">
                 {formatDate(user.last_sign_in_at || user.created_at)}
               </div>
             </div>
@@ -286,7 +296,7 @@ export const ProfileModal = memo(function ProfileModal({
                 <Button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex-1"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
                 >
                   {isSaving ? (
                     <>
@@ -303,7 +313,7 @@ export const ProfileModal = memo(function ProfileModal({
                 <Button
                   variant="outline"
                   onClick={handleCancel}
-                  className="flex-1"
+                  className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
@@ -311,11 +321,11 @@ export const ProfileModal = memo(function ProfileModal({
               </>
             ) : (
               <>
-                <Button onClick={() => setIsEditing(true)} className="flex-1">
+                <Button onClick={() => setIsEditing(true)} className="flex-1 bg-blue-600 hover:bg-blue-700">
                   <Edit3 className="h-4 w-4 mr-2" />
                   Edit Profile
                 </Button>
-                <Button variant="outline" onClick={onClose} className="flex-1">
+                <Button variant="outline" onClick={onClose} className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50">
                   Close
                 </Button>
               </>
