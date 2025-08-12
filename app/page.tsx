@@ -848,7 +848,7 @@ export default function TravelExpensesTracker() {
         )} */}
 
         {/* Optional Travel Profile Creation - Not blocking */}
-        {user && travelProfiles.length === 0 && !isLoadingProfiles && (
+        {/* {user && travelProfiles.length === 0 && !isLoadingProfiles && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-lg">
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center space-x-3">
@@ -882,7 +882,7 @@ export default function TravelExpensesTracker() {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* No Travel Profiles Message - REMOVED since profiles are now optional */}
         {/* {user && travelProfiles.length === 0 && !isLoadingProfiles && (
