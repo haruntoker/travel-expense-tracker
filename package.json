@@ -11,6 +11,7 @@
     "test:connection": "node scripts/test-connection.js",
     "verify:schema": "node scripts/verify-schema.js",
     "test:persistence": "node scripts/test-data-persistence.js",
+    "fix:rls": "node scripts/fix-rls-policies.js",
     "migrate": "node scripts/run-migration.js"
   },
   "dependencies": {
