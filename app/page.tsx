@@ -746,14 +746,14 @@ export default function TravelExpensesTracker() {
               <div className="hidden md:block p-3 bg-blue-100 rounded-full">
                 <Plane className="h-8 w-8 text-blue-600" />
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+              <h1 className="text-xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
                 Travel Expenses Tracker
               </h1>
             </div>
-          </div>
-          <div className="flex-1 flex justify-end">
+            <div className="flex-1 flex justify-end">
               <UserProfile />
             </div>
+          </div>
           <p className="text-slate-700 text-lg max-w-2xl mx-auto">
             Smart budget management for your travels. Track expenses, visualize
             spending patterns, and stay within budget.
