@@ -6,25 +6,25 @@ import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Travel Expenses Tracker - Smart Budget Management",
-  description:
-    "Track your travel expenses, manage budgets, and visualize spending patterns with our intuitive expense tracker.",
-  keywords:
-    "travel expenses, budget tracker, expense management, travel budget, spending tracker",
-  authors: [{ name: "Travel Expenses Tracker" }],
-  creator: "Travel Expenses Tracker",
-  openGraph: {
-    title: "Travel Expenses Tracker",
-    description: "Smart budget management for your travels",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Travel Expenses Tracker",
-    description: "Smart budget management for your travels",
-  },
-};
+// export const metadata: Metadata = {
+//   title: "Travel Expenses Tracker - Smart Budget Management",
+//   description:
+//     "Track your travel expenses, manage budgets, and visualize spending patterns with our intuitive expense tracker.",
+//   keywords:
+//     "travel expenses, budget tracker, expense management, travel budget, spending tracker",
+//   authors: [{ name: "Travel Expenses Tracker" }],
+//   creator: "Travel Expenses Tracker",
+//   openGraph: {
+//     title: "Travel Expenses Tracker",
+//     description: "Smart budget management for your travels",
+//     type: "website",
+//   },
+//   twitter: {
+//     card: "summary_large_image",
+//     title: "Travel Expenses Tracker",
+//     description: "Smart budget management for your travels",
+//   },
+// };
 
 export default function RootLayout({
   children,
