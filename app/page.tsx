@@ -736,29 +736,25 @@ export default function TravelExpensesTracker() {
   // }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 sm:p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="text-center space-y-3 sm:space-y-4">
-          {/* Mobile-first header layout */}
-          <div className="flex flex-col space-y-3 sm:space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-            {/* Logo and Title - Mobile centered, Desktop left */}
-            <div className="flex items-center justify-center md:justify-start space-x-2 sm:space-x-3 order-1 md:order-1">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-full">
-                <Plane className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-blue-600" />
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex-1"></div>
+            <div className="flex items-center justify-center space-x-3">
+              <div className="hidden md:block p-3 bg-blue-100 rounded-full">
+                <Plane className="h-8 w-8 text-blue-600" />
               </div>
-              <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-tight">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
                 Travel Expenses Tracker
               </h1>
             </div>
-
-            {/* User Profile - Mobile top right, Desktop right */}
-            <div className="flex justify-end order-2 md:order-3">
+          </div>
+          <div className="flex-1 flex justify-end">
               <UserProfile />
             </div>
-          </div>
-
-          <p className="text-slate-700 text-sm sm:text-base md:text-lg max-w-2xl mx-auto px-2 sm:px-4">
+          <p className="text-slate-700 text-lg max-w-2xl mx-auto">
             Smart budget management for your travels. Track expenses, visualize
             spending patterns, and stay within budget.
           </p>

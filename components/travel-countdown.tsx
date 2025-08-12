@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Plane, X, Clock } from "lucide-react";
+import { Calendar, X, Clock } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 interface CountdownTime {
@@ -286,7 +286,7 @@ export function TravelCountdown({
       <CardHeader className="text-center pb-4">
         <CardTitle className="flex items-center justify-center space-x-3 text-emerald-800">
           <div className="p-2 bg-emerald-100 rounded-full">
-            <Plane className="h-6 w-6 text-emerald-600" />
+            <Clock className="h-6 w-6 text-emerald-600" />
           </div>
           <span className="text-2xl font-bold">Travel Countdown</span>
         </CardTitle>
