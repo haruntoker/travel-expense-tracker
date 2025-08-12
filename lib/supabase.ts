@@ -13,7 +13,13 @@ export const supabase = (() => {
   }
   
   console.log('🆕 Creating new Supabase client instance')
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey)
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  })
   return supabaseInstance
 })()
 
@@ -41,10 +47,40 @@ export interface Database {
           updated_at?: string
         }
       }
+      travel_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          description: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          description?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          description?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       travel_countdowns: {
         Row: {
           id: string
           user_id: string
+          travel_profile_id: string | null
           travel_date: string
           is_active: boolean
           created_at: string
@@ -53,6 +89,7 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
+          travel_profile_id?: string | null
           travel_date: string
           is_active?: boolean
           created_at?: string
@@ -61,6 +98,7 @@ export interface Database {
         Update: {
           id?: string
           user_id?: string
+          travel_profile_id?: string | null
           travel_date?: string
           is_active?: boolean
           created_at?: string
@@ -71,6 +109,7 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          travel_profile_id: string | null
           category: string
           amount: number
           created_at: string
@@ -79,6 +118,7 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
+          travel_profile_id?: string | null
           category: string
           amount: number
           created_at?: string
@@ -87,6 +127,7 @@ export interface Database {
         Update: {
           id?: string
           user_id?: string
+          travel_profile_id?: string | null
           category?: string
           amount?: number
           created_at?: string
@@ -97,6 +138,7 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          travel_profile_id: string | null
           amount: number
           created_at: string
           updated_at: string
@@ -104,6 +146,7 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
+          travel_profile_id?: string | null
           amount: number
           created_at?: string
           updated_at?: string
@@ -111,6 +154,7 @@ export interface Database {
         Update: {
           id?: string
           user_id?: string
+          travel_profile_id?: string | null
           amount?: number
           created_at?: string
           updated_at?: string

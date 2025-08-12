@@ -75,6 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
+      console.log("🔐 Attempting sign up for:", email);
+      console.log(
+        "🔐 Redirect URL:",
+        `${window.location.origin}/auth/callback`
+      );
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -84,6 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        console.error("❌ Sign up error:", error);
+
         // Provide user-friendly error messages
         let userMessage = "Failed to create account. Please try again.";
 
@@ -97,10 +105,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (error.message.includes("Too many requests")) {
           userMessage =
             "Too many sign-up attempts. Please wait a few minutes before trying again.";
+        } else if (error.message.includes("Invalid redirect URL")) {
+          userMessage = "Configuration error. Please contact support.";
+        } else if (error.message.includes("Email rate limit exceeded")) {
+          userMessage =
+            "Too many email requests. Please wait before trying again.";
         }
 
         return { success: false, error: userMessage };
       }
+
+      console.log("✅ Sign up successful:", data);
 
       if (data.user && !data.session) {
         // Email confirmation required
@@ -109,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { success: true };
     } catch (error) {
+      console.error("❌ Sign up exception:", error);
       return {
         success: false,
         error:
@@ -161,6 +177,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithMagicLink = async (email: string) => {
     try {
+      console.log("🔐 Attempting magic link sign in for:", email);
+      console.log(
+        "🔐 Redirect URL:",
+        `${window.location.origin}/auth/callback`
+      );
+
       const { data, error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -169,6 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        console.error("❌ Magic link error:", error);
+
         // Provide user-friendly error messages
         let userMessage = "Failed to send magic link. Please try again.";
 
@@ -180,13 +204,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (error.message.includes("User not found")) {
           userMessage =
             "No account found with this email. Please sign up first.";
+        } else if (error.message.includes("Email rate limit exceeded")) {
+          userMessage =
+            "Too many email requests. Please wait before trying again.";
+        } else if (error.message.includes("Invalid redirect URL")) {
+          userMessage = "Configuration error. Please contact support.";
+        } else if (error.message.includes("Email not confirmed")) {
+          userMessage = "Please confirm your email before using magic link.";
         }
 
         return { success: false, error: userMessage };
       }
 
+      console.log("✅ Magic link sent successfully:", data);
       return { success: true };
     } catch (error) {
+      console.error("❌ Magic link exception:", error);
       return {
         success: false,
         error:
