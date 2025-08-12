@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Calendar as CalendarIcon } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -20,8 +21,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import { Calendar, Clock, X } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
 
@@ -44,9 +51,10 @@ export const TravelCountdown = memo(function TravelCountdown({
     secs: 0,
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [tempDate, setTempDate] = useState<string>("");
+  const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
   const [tempTime, setTempTime] = useState<string>("12:00");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
 
   // Use database hook with travel profile ID (can be empty string for personal use)
@@ -110,7 +118,7 @@ export const TravelCountdown = memo(function TravelCountdown({
   }, [isActive, travelDate, toast, countdown.days]);
 
   const handleSetDate = useCallback(async () => {
-    if (!tempDate.trim()) {
+    if (!tempDate) {
       toast({
         title: "❌ No Date Selected",
         description: "Please select a travel date to start the countdown.",
@@ -119,9 +127,11 @@ export const TravelCountdown = memo(function TravelCountdown({
       return;
     }
 
-    // Combine date and time
-    const dateTimeString = `${tempDate}T${tempTime}`;
-    const selectedDate = new Date(dateTimeString);
+    // Create a new date object and set the exact time
+    const selectedDate = new Date(tempDate);
+    const [hours, minutes] = tempTime.split(":").map(Number);
+    selectedDate.setHours(hours, minutes, 0, 0);
+
     const now = new Date();
 
     if (selectedDate <= now) {
@@ -134,15 +144,21 @@ export const TravelCountdown = memo(function TravelCountdown({
       return;
     }
 
+    // Store as ISO string (Supabase timestamptz will handle UTC conversion)
+    const dateTimeString = selectedDate.toISOString();
+
     try {
       const success = await setTravelCountdown(dateTimeString);
       if (success) {
         setIsEditing(false);
-        setTempDate("");
+        setTempDate(undefined);
         setTempTime("12:00");
         toast({
           title: "🎉 Countdown Started!",
-          description: `Your travel countdown is now active for ${tempDate} at ${tempTime}!`,
+          description: `Your travel countdown is now active for ${format(
+            selectedDate,
+            "PPP"
+          )} at ${tempTime}!`,
         });
       }
     } catch (error) {
@@ -173,6 +189,10 @@ export const TravelCountdown = memo(function TravelCountdown({
       });
     }
   }, [clearTravelCountdown, toast]);
+
+  const handleDateTimeDone = useCallback(() => {
+    setIsDatePickerOpen(false);
+  }, []);
 
   // If no countdown is set, show the setup interface
   if (!isActive || !travelDate) {
@@ -206,30 +226,41 @@ export const TravelCountdown = memo(function TravelCountdown({
                   >
                     When are you traveling?
                   </Label>
-                  <Input
-                    id="travel-date"
-                    type="date"
-                    value={tempDate}
-                    onChange={(e) => setTempDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="text-center text-lg border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="travel-time"
-                    className="text-blue-800 font-medium"
+                  <Popover
+                    open={isDatePickerOpen}
+                    onOpenChange={setIsDatePickerOpen}
                   >
-                    What time?
-                  </Label>
-                  <Input
-                    id="travel-time"
-                    type="time"
-                    value={tempTime}
-                    onChange={(e) => setTempTime(e.target.value)}
-                    className="text-center text-lg border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {tempDate ? format(tempDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-4" align="start">
+                      <CalendarIcon
+                        mode="single"
+                        selected={tempDate}
+                        onSelect={setTempDate}
+                        disabled={(date: Date) => date <= new Date()}
+                        initialFocus
+                      />
+                      <div className="mt-4 flex items-center">
+                        <Clock className="mr-2 h-4 w-4" />
+                        <Input
+                          type="time"
+                          value={tempTime}
+                          onChange={(e) => setTempTime(e.target.value)}
+                          className="w-[100px]"
+                        />
+                      </div>
+                      <div className="mt-4 flex justify-end">
+                        <Button onClick={handleDateTimeDone}>Done</Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="flex justify-center space-x-3">
@@ -237,7 +268,7 @@ export const TravelCountdown = memo(function TravelCountdown({
                     variant="outline"
                     onClick={() => {
                       setIsEditing(false);
-                      setTempDate("");
+                      setTempDate(undefined);
                       setTempTime("12:00");
                     }}
                     className="border-blue-300 text-blue-700 hover:bg-blue-100"
@@ -291,18 +322,25 @@ export const TravelCountdown = memo(function TravelCountdown({
           <span className="text-2xl font-bold">Travel Countdown</span>
         </CardTitle>
         <p className="text-emerald-700 font-medium">
-          {new Date(travelDate).toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-          {" at "}
-          {new Date(travelDate).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          })}
+          {(() => {
+            const date = new Date(travelDate);
+            return (
+              <>
+                {date.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+                {" at "}
+                {date.toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </>
+            );
+          })()}
         </p>
       </CardHeader>
 
@@ -373,9 +411,9 @@ export const TravelCountdown = memo(function TravelCountdown({
             variant="outline"
             size="sm"
             onClick={() => {
-              // Populate current values for editing
-              setTempDate(travelDate.split("T")[0]);
-              setTempTime(travelDate.split("T")[1]?.substring(0, 5) || "12:00");
+              const currentDate = new Date(travelDate);
+              setTempDate(currentDate);
+              setTempTime(currentDate.toTimeString().slice(0, 5));
               setIsEditing(true);
             }}
             className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
@@ -412,38 +450,41 @@ export const TravelCountdown = memo(function TravelCountdown({
               >
                 New travel date
               </Label>
-              <Input
-                id="edit-travel-date"
-                type="date"
-                value={tempDate}
-                onChange={(e) => setTempDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-                className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900 bg-white"
-                style={{
-                  color: "#1e293b", // Ensure dark text for better visibility
-                  backgroundColor: "#ffffff",
-                }}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="edit-travel-time"
-                className="text-emerald-800 font-medium"
+              <Popover
+                open={isDatePickerOpen}
+                onOpenChange={setIsDatePickerOpen}
               >
-                New travel time
-              </Label>
-              <Input
-                id="edit-travel-time"
-                type="time"
-                value={tempTime}
-                onChange={(e) => setTempTime(e.target.value)}
-                className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900 bg-white"
-                style={{
-                  color: "#1e293b", // Ensure dark text for better visibility
-                  backgroundColor: "#ffffff",
-                }}
-              />
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {tempDate ? format(tempDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="start">
+                  <CalendarIcon
+                    mode="single"
+                    selected={tempDate}
+                    onSelect={setTempDate}
+                    disabled={(date: Date) => date <= new Date()}
+                    initialFocus
+                  />
+                  <div className="mt-4 flex items-center">
+                    <Clock className="mr-2 h-4 w-4" />
+                    <Input
+                      type="time"
+                      value={tempTime}
+                      onChange={(e) => setTempTime(e.target.value)}
+                      className="w-[100px]"
+                    />
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button onClick={handleDateTimeDone}>Done</Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex justify-end space-x-3">
@@ -451,7 +492,7 @@ export const TravelCountdown = memo(function TravelCountdown({
                 variant="outline"
                 onClick={() => {
                   setIsEditing(false);
-                  setTempDate("");
+                  setTempDate(undefined);
                   setTempTime("12:00");
                 }}
                 className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 bg-white"

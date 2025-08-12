@@ -178,7 +178,7 @@ export const ProfileModal = memo(function ProfileModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-white border-slate-200">
+      <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2 text-slate-900">
             <User className="h-5 w-5 text-blue-600" />

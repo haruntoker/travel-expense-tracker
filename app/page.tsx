@@ -637,55 +637,27 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex-1"></div>
-            <div className="flex items-center justify-center space-x-3">
-              <div className="hidden md:block p-3 bg-blue-100 rounded-full">
-                <Plane className="h-8 w-8 text-blue-600" />
-              </div>
-              <h1 className="text-xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-                Travel Expenses Tracker
-              </h1>
-            </div>
-            <div className="flex-1 flex justify-end">
-              {/* User Profile */}
-              {user && (
-                <div className="mb-6">
-                  <UserProfile />
-                </div>
-              )}
-            </div>
+        <div className="flex items-center justify-between p-4 md:p-6 lg:p-8">
+          {/* App Title */}
+          <div className="flex items-center space-x-2">
+          <h1 className="text-xl font-bold text-blue-800">
+              Travel Expenses Tracker
+            </h1>
           </div>
-          <div className="flex items-center justify-center space-x-4">
-            <p className="text-slate-700 text-lg max-w-2xl mx-auto">
-              Smart budget management for your travels. Track expenses,
-              visualize spending patterns, and stay within budget.
-            </p>
-            {/* Manual Refresh Button */}
-            {/* {user && isInitialized && !isLoading && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadData && loadData(true)} // Force reload
-                disabled={isRefreshing}
-                className="text-slate-600 border-slate-300 hover:bg-slate-50"
-              >
-                <div className="h-4 w-4 mr-2">
-                  {isRefreshing ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600"></div>
-                  ) : (
-                    <div className="h-4 w-4">🔄</div>
-                  )}
-                </div>
-                Refresh
-              </Button>
-            )} */}
-          </div>
+
+          {/* User Profile on Right */}
+          <div className="flex items-center">{user && <UserProfile />}</div>
         </div>
+
+        {/* Main Content Area */}
+        {/* Description below header */}
+        <p className="text-center text-gray-600 text-sm md:text-base max-w-2xl mx-auto">
+          Smart budget management for your travels. Track expenses, visualize
+          spending patterns, and stay within budget.
+        </p>
 
         {/* Subtle Refresh Indicator */}
         {shouldShowRefreshIndicator && (
@@ -701,202 +673,6 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
             <p className="text-xs text-slate-500">
               Last updated: {new Date().toLocaleTimeString()}
             </p>
-          </div>
-        )}
-
-        {/* Travel Profile Selector */}
-        {/* {user && travelProfiles.length > 0 && (
-            <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-slate-900 flex items-center space-x-2">
-                  <Plane className="h-5 w-5 text-blue-600" />
-                  <span>Travel Profile</span>
-                </h2>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => loadData && loadData()}
-                    disabled={isLoading || isSwitchingProfile}
-                    className="text-green-600 border-green-300 hover:bg-green-50"
-                  >
-                    <div className="h-4 w-4 mr-2">
-                      {isLoading || isSwitchingProfile ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                      ) : (
-                        <div className="h-4 w-4">🔄</div>
-                      )}
-                    </div>
-                    Refresh
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open("/sharing", "_blank")}
-                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                  >
-                    Manage Profiles
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <Label
-                  htmlFor="profile-select"
-                  className="text-sm font-medium text-slate-700"
-                >
-                  Select Profile:
-                </Label>
-                <select
-                  id="profile-select"
-                  value={selectedTravelProfile || ""}
-                  onChange={(e) =>
-                    stableHandleTravelProfileChange(e.target.value || null)
-                  }
-                  disabled={isSwitchingProfile}
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50"
-                >
-                  {travelProfiles.map((profile) => (
-                    <option key={profile.id} value={profile.id}>
-                      {profile.name}{" "}
-                      {profile.owner_id === user?.id ? "(Owner)" : "(Member)"}
-                    </option>
-                  ))}
-                </select>
-                {isSwitchingProfile && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                )}
-              </div>
-              {selectedTravelProfile && (
-                <div className="mt-3">
-                  <p className="text-sm text-slate-600">
-                    Currently tracking expenses for:{" "}
-                    <strong className="text-blue-600">
-                      {
-                        travelProfiles.find((p) => p.id === selectedTravelProfile)
-                          ?.name
-                      }
-                    </strong>
-                  </p>
-                  {(isLoading || isSwitchingProfile) && (
-                    <p className="text-xs text-blue-600 mt-1 flex items-center">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
-                      {isSwitchingProfile
-                        ? "Switching profiles..."
-                        : "Loading data..."}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )} */}
-
-        {/* Optional Travel Profile Creation - Not blocking */}
-        {/* {user && travelProfiles.length === 0 && !isLoadingProfiles && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-lg">
-              <div className="text-center space-y-4">
-                <div className="flex items-center justify-center space-x-3">
-                  <Plane className="h-8 w-8 text-blue-600" />
-                  <h3 className="text-xl font-semibold text-blue-900">
-                    Want to Collaborate?
-                  </h3>
-                </div>
-                <p className="text-blue-700 max-w-2xl mx-auto">
-                  Create a travel profile to collaborate with friends and family
-                  on shared expenses. This is completely optional - you can
-                  continue using the app for personal expense tracking.
-                </p>
-                <div className="flex justify-center space-x-3">
-                  <Button
-                    onClick={() => window.open("/sharing", "_blank")}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Create Travel Profile
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      // Hide this message for the session
-                      setTravelProfiles([{ id: "hidden", name: "Hidden" }]);
-                    }}
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                  >
-                    Maybe Later
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )} */}
-
-        {/* No Travel Profiles Message - REMOVED since profiles are now optional */}
-        {/* {user && travelProfiles.length === 0 && !isLoadingProfiles && (
-            <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-6">
-              <div className="text-center py-6">
-                <Plane className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-slate-900 mb-2">
-                  No Travel Profiles Yet
-                </h3>
-                <p className="text-slate-600 mb-4">
-                  Create a travel profile to start collaborating with others on
-                  expenses.
-                </p>
-                <Button
-                  onClick={() => window.open("/sharing", "_blank")}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Create Your First Profile
-                </Button>
-              </div>
-            </div>
-          )} */}
-
-        {/* Debug Section - Remove in production */}
-        {process.env.NODE_ENV === "development" && (
-          <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              🔧 Debug Panel
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log("🔍 Manual data load triggered");
-                  loadData();
-                }}
-                className="text-gray-700"
-              >
-                Reload Data
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log("🔍 Current state:", {
-                    expenses: expenses.length,
-                    budget: budget ? `€${budget.amount}` : "none",
-                    selectedTravelProfile,
-                    isLoading,
-                    isInitialized,
-                  });
-                }}
-                className="text-gray-700"
-              >
-                Log State
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log("🔍 Testing database connection...");
-                  // Remove dynamic import to prevent initialization issues
-                  console.log("Database connection test skipped in production");
-                }}
-                className="text-gray-700"
-              >
-                Test DB Connection
-              </Button>
-            </div>
           </div>
         )}
 
@@ -1037,7 +813,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                   </DialogTrigger>
                   <DialogContent className="bg-white border-slate-200">
                     <DialogHeader>
-                      <DialogTitle className="text-slate-900">
+                      <DialogTitle className="text-black bg-white">
                         Set Budget (Optional)
                       </DialogTitle>
                     </DialogHeader>
@@ -1045,7 +821,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                       <div className="space-y-2">
                         <Label
                           htmlFor="budget"
-                          className="text-slate-700 font-medium"
+                          className="text-black bg-white font-medium"
                         >
                           Budget Amount (€)
                         </Label>
@@ -1347,35 +1123,35 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
 
                 {/* Detailed Progress Stats */}
                 {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold text-slate-800">
-                    €{totalSpent.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-slate-600">Total Spent</div>
+              <div className="text-center p-3 bg-slate-50 rounded-lg">
+                <div className="text-2xl font-bold text-slate-800">
+                  €{totalSpent.toLocaleString()}
                 </div>
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold text-slate-800">
-                    €{remainingBudget.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-slate-600">Remaining</div>
+                <div className="text-xs text-slate-600">Total Spent</div>
+              </div>
+              <div className="text-center p-3 bg-slate-50 rounded-lg">
+                <div className="text-2xl font-bold text-slate-800">
+                  €{remainingBudget.toLocaleString()}
                 </div>
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold text-slate-800">
-                    {expenses.length}
-                  </div>
-                  <div className="text-xs text-slate-600">Expenses</div>
+                <div className="text-xs text-slate-600">Remaining</div>
+              </div>
+              <div className="text-center p-3 bg-slate-50 rounded-lg">
+                <div className="text-2xl font-bold text-slate-800">
+                  {expenses.length}
                 </div>
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold text-slate-800">
-                    {expenses.length > 0
-                      ? `€${Math.round(
-                          totalSpent / expenses.length
-                        ).toLocaleString()}`
-                      : "€0"}
-                  </div>
-                  <div className="text-xs text-slate-600">Average</div>
+                <div className="text-xs text-slate-600">Expenses</div>
+              </div>
+              <div className="text-center p-3 bg-slate-50 rounded-lg">
+                <div className="text-2xl font-bold text-slate-800">
+                  {expenses.length > 0
+                    ? `€${Math.round(
+                        totalSpent / expenses.length
+                      ).toLocaleString()}`
+                    : "€0"}
                 </div>
-              </div> */}
+                <div className="text-xs text-slate-600">Average</div>
+              </div>
+            </div> */}
 
                 {/* Budget Status Indicator */}
                 <div className="flex justify-center">
@@ -1429,8 +1205,6 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
             {/* Expense Analytics */}
             {user && isInitialized && !isLoading && (
               <div className="space-y-6">
-              
-
                 {expenses.length > 0 ? (
                   <ExpenseCharts
                     key={`charts-${selectedTravelProfile || "personal"}`}
