@@ -71,6 +71,7 @@ export default function TravelExpensesTracker() {
     removeBudget,
     loadData,
     clearData,
+    isRefreshing,
   } = useDatabase(selectedTravelProfile);
 
     // Debug: Log data state changes
@@ -225,7 +226,10 @@ export default function TravelExpensesTracker() {
 
     // Only show database loading when user is authenticated (removed travel profile requirement)
     const shouldShowDatabaseLoading =
-      user && (isLoading || !isInitialized || isSwitchingProfile);
+      user && (!isInitialized || (isLoading && expenses.length === 0));
+
+    // Show a subtle refresh indicator instead of full loading when refreshing existing data
+    const shouldShowRefreshIndicator = user && isRefreshing && expenses.length > 0;
 
     // Memoized calculations
     const totalSpent = useMemo(
@@ -766,11 +770,49 @@ export default function TravelExpensesTracker() {
                 <UserProfile />
               </div>
             </div>
-            <p className="text-slate-700 text-lg max-w-2xl mx-auto">
-              Smart budget management for your travels. Track expenses, visualize
-              spending patterns, and stay within budget.
-            </p>
+            <div className="flex items-center justify-center space-x-4">
+              <p className="text-slate-700 text-lg max-w-2xl mx-auto">
+                Smart budget management for your travels. Track expenses, visualize
+                spending patterns, and stay within budget.
+              </p>
+              {/* Manual Refresh Button */}
+              {user && isInitialized && !isLoading && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadData && loadData(true)} // Force reload
+                  disabled={isRefreshing}
+                  className="text-slate-600 border-slate-300 hover:bg-slate-50"
+                >
+                  <div className="h-4 w-4 mr-2">
+                    {isRefreshing ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600"></div>
+                    ) : (
+                      <div className="h-4 w-4">🔄</div>
+                    )}
+                  </div>
+                  Refresh
+                </Button>
+              )}
+            </div>
           </div>
+
+          {/* Subtle Refresh Indicator */}
+          {shouldShowRefreshIndicator && (
+            <div className="flex items-center justify-center space-x-2 text-sm text-slate-600 bg-blue-50 border border-blue-200 rounded-lg py-2 px-4 max-w-xs mx-auto">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span>Refreshing data...</span>
+            </div>
+          )}
+
+          {/* Last Updated Indicator */}
+          {user && isInitialized && !isLoading && expenses.length > 0 && (
+            <div className="text-center">
+              <p className="text-xs text-slate-500">
+                Last updated: {new Date().toLocaleTimeString()}
+              </p>
+            </div>
+          )}
 
           {/* Travel Profile Selector */}
           {/* {user && travelProfiles.length > 0 && (

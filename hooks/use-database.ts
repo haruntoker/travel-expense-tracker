@@ -32,13 +32,37 @@ export function useDatabase(travelProfileId: string | null) {
   const [travelCountdown, setTravelCountdown] = useState<DatabaseTravelCountdown | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [lastLoadTime, setLastLoadTime] = useState<number>(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const { toast } = useToast()
 
+  // Cache key for this profile
+  const cacheKey = `data_${travelProfileId || 'personal'}`
+
+  // Check if we need to reload data (only reload if data is older than 5 minutes)
+  const shouldReloadData = useCallback(() => {
+    const now = Date.now()
+    const fiveMinutes = 5 * 60 * 1000
+    return now - lastLoadTime > fiveMinutes
+  }, [lastLoadTime])
+
   // Load all data from database with retry mechanism
-  const loadData = useCallback(async (retryCount = 0) => {
+  const loadData = useCallback(async (forceReload = false, retryCount = 0) => {
     try {
+      // If not forcing reload and we have recent data, skip loading
+      if (!forceReload && !shouldReloadData() && expenses.length > 0) {
+        console.log('🔍 loadData: Skipping load - data is recent and available');
+        return;
+      }
+
       console.log('🔍 loadData: Starting data load for travelProfileId:', travelProfileId || 'personal use', 'attempt:', retryCount + 1);
-      setIsLoading(true);
+      
+      // Only show loading spinner on first load or forced reload
+      if (expenses.length === 0 || forceReload) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -89,6 +113,7 @@ export function useDatabase(travelProfileId: string | null) {
       setExpenses(transformedExpenses)
       setBudget(transformedBudget)
       setTravelCountdown(transformedCountdown)
+      setLastLoadTime(Date.now())
       
       console.log('🔍 loadData: Data loaded successfully:', {
         expenses: transformedExpenses.length,
@@ -114,7 +139,7 @@ export function useDatabase(travelProfileId: string | null) {
       // Retry logic (max 1 attempt)
       if (retryCount < 1) {
         console.log('🔍 loadData: Retrying data load in 2 seconds...');
-        setTimeout(() => loadData(retryCount + 1), 2000) // Wait 2 seconds before retry
+        setTimeout(() => loadData(forceReload, retryCount + 1), 2000) // Wait 2 seconds before retry
         return
       }
       
@@ -138,8 +163,9 @@ export function useDatabase(travelProfileId: string | null) {
       }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
-  }, [travelProfileId, toast])
+  }, [travelProfileId, toast, expenses.length, shouldReloadData])
 
   // Initialize data on mount - now allows data loading for both personal and travel profile use
   useEffect(() => {
@@ -189,7 +215,7 @@ export function useDatabase(travelProfileId: string | null) {
     return () => {
       mounted = false;
     };
-  }, [travelProfileId]) // Only depend on travelProfileId
+  }, [travelProfileId, loadData]) // Only depend on travelProfileId
 
   // Reload data when travelProfileId changes (for profile switching)
   useEffect(() => {
@@ -197,7 +223,7 @@ export function useDatabase(travelProfileId: string | null) {
       console.log('useDatabase: travelProfileId changed, reloading data for:', travelProfileId);
       loadData();
     }
-  }, [travelProfileId, isInitialized, isLoading]) // Remove loadData from dependencies
+  }, [travelProfileId, isInitialized, isLoading, loadData]) // Remove loadData from dependencies
 
   // Listen for auth state changes to reload data when user logs in
   useEffect(() => {
@@ -214,7 +240,23 @@ export function useDatabase(travelProfileId: string | null) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isInitialized]) // Remove loadData and clearData from dependencies
+  }, [isInitialized, loadData])
+
+  // Listen for page visibility changes to intelligently refresh data
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isInitialized && !isLoading) {
+        // Only refresh if data is older than 5 minutes and we're not already loading
+        if (shouldReloadData() && expenses.length > 0) {
+          console.log('useDatabase: Page became visible, refreshing stale data');
+          loadData(false); // Don't force reload, just refresh if needed
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isInitialized, isLoading, shouldReloadData, loadData, expenses.length]);
 
   // Expense operations
   const addExpense = useCallback(async (category: string, amount: number) => {
@@ -460,6 +502,7 @@ export function useDatabase(travelProfileId: string | null) {
     travelCountdown,
     isLoading,
     isInitialized,
+    isRefreshing,
     
     // Operations
     addExpense,
