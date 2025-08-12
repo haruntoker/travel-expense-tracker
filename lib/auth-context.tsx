@@ -40,8 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Debug: Log when AuthProvider is mounted
   useEffect(() => {
-    console.log("🔐 AuthProvider mounted");
-    return () => console.log("🔐 AuthProvider unmounted");
+    return () => {};
   }, []);
 
   useEffect(() => {
@@ -75,12 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      console.log("🔐 Attempting sign up for:", email);
-      console.log(
-        "🔐 Redirect URL:",
-        `${window.location.origin}/auth/callback`
-      );
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -90,8 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        console.error("❌ Sign up error:", error);
-
         // Provide user-friendly error messages
         let userMessage = "Failed to create account. Please try again.";
 
@@ -115,8 +106,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: userMessage };
       }
 
-      console.log("✅ Sign up successful:", data);
-
       if (data.user && !data.session) {
         // Email confirmation required
         return { success: true };
@@ -124,7 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { success: true };
     } catch (error) {
-      console.error("❌ Sign up exception:", error);
       return {
         success: false,
         error:
@@ -177,12 +165,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithMagicLink = async (email: string) => {
     try {
-      console.log("🔐 Attempting magic link sign in for:", email);
-      console.log(
-        "🔐 Redirect URL:",
-        `${window.location.origin}/auth/callback`
-      );
-
       const { data, error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -191,8 +173,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        console.error("❌ Magic link error:", error);
-
         // Provide user-friendly error messages
         let userMessage = "Failed to send magic link. Please try again.";
 
@@ -216,10 +196,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: userMessage };
       }
 
-      console.log("✅ Magic link sent successfully:", data);
       return { success: true };
     } catch (error) {
-      console.error("❌ Magic link exception:", error);
       return {
         success: false,
         error:

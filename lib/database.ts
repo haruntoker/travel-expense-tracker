@@ -31,13 +31,10 @@ export class DatabaseService {
       // Test basic Supabase connection instead of auth
       const { data, error } = await supabase.from('users').select('count').limit(1)
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is fine
-        console.error('Database connection test failed:', error)
         return false
       }
-      console.log('Database connection test successful')
       return true
     } catch (error) {
-      console.error('Database connection test error:', error)
       return false
     }
   }
@@ -45,19 +42,14 @@ export class DatabaseService {
   // Debug function to check budgets table
   static async debugBudgets(): Promise<void> {
     try {
-      console.log('=== DEBUG: Checking budgets table ===')
-      
       // Check all budgets
       const { data: allBudgets, error: allError } = await supabase
         .from('budgets')
         .select('*')
       
       if (allError) {
-        console.error('Error fetching all budgets:', allError)
         return
       }
-      
-      console.log('All budgets in table:', allBudgets)
       
       // Check budgets for current user
       const userId = await getCurrentUserId()
@@ -67,15 +59,10 @@ export class DatabaseService {
         .eq('user_id', userId)
       
       if (userError) {
-        console.error('Error fetching user budgets:', userError)
         return
       }
-      
-      console.log('Budgets for current user:', userBudgets)
-      console.log('Current user ID:', userId)
-      console.log('=== END DEBUG ===')
     } catch (error) {
-      console.error('Error in debugBudgets:', error)
+      // Silent error handling
     }
   }
 
@@ -84,13 +71,10 @@ export class DatabaseService {
     try {
       // Validate travelProfileId parameter
       if (travelProfileId && typeof travelProfileId !== 'string') {
-        console.warn('getTravelCountdown: Invalid travelProfileId parameter:', travelProfileId)
         return null
       }
       
-      console.log('🔍 getTravelCountdown called with travelProfileId:', travelProfileId)
       const userId = await getCurrentUserId()
-      console.log('🔍 User ID for travel countdown:', userId)
       
       let query = supabase
         .from('travel_countdowns')
@@ -101,10 +85,8 @@ export class DatabaseService {
 
       if (travelProfileId) {
         query = query.eq('travel_profile_id', travelProfileId)
-        console.log('🔍 getTravelCountdown: Querying for travel profile:', travelProfileId)
       } else {
         query = query.eq('user_id', userId).is('travel_profile_id', null)
-        console.log('🔍 getTravelCountdown: Querying for personal use (no travel profile)')
       }
 
       const { data, error } = await query.single()
@@ -112,21 +94,16 @@ export class DatabaseService {
       if (error) {
         if (error.code === 'PGRST116') {
           // No rows returned - this is normal for new users
-          console.log('🔍 No travel countdown found (normal for new users)')
           return null
         }
-        console.error('❌ Error fetching travel countdown:', error)
         return null
       }
 
-      console.log('🔍 Travel countdown found:', data)
       return data
     } catch (error) {
       if (error instanceof Error && error.message.includes('User not authenticated')) {
-        console.log('🔐 User not authenticated, returning null for travel countdown')
         return null
       }
-      console.error('❌ Error in getTravelCountdown:', error)
       return null
     }
   }
@@ -212,13 +189,10 @@ export class DatabaseService {
     try {
       // Validate travelProfileId parameter
       if (travelProfileId && typeof travelProfileId !== 'string') {
-        console.warn('getExpenses: Invalid travelProfileId parameter:', travelProfileId)
         return []
       }
       
       const userId = await getCurrentUserId()
-      console.log('🔍 getExpenses: User ID:', userId, 'travelProfileId:', travelProfileId || 'personal use')
-      
       let query = supabase
         .from('expenses')
         .select('*')
@@ -227,10 +201,8 @@ export class DatabaseService {
 
       if (travelProfileId) {
         query = query.eq('travel_profile_id', travelProfileId)
-        console.log('🔍 getExpenses: Querying for travel profile:', travelProfileId)
       } else {
         query = query.is('travel_profile_id', null)
-        console.log('🔍 getExpenses: Querying for personal use (no travel profile)')
       }
 
       const { data, error } = await query
@@ -238,21 +210,16 @@ export class DatabaseService {
       if (error) {
         if (error.code === 'PGRST116') {
           // No rows returned - this is normal for new users
-          console.log('🔍 No expenses found (normal for new users)')
           return []
         }
-        console.error('❌ Error fetching expenses:', error)
         return []
       }
 
-      console.log('🔍 Expenses fetched successfully:', data?.length || 0)
       return data || []
     } catch (error) {
       if (error instanceof Error && error.message.includes('User not authenticated')) {
-        console.log('🔐 User not authenticated, returning empty expenses array')
         return []
       }
-      console.error('❌ Error in getExpenses:', error)
       return []
     }
   }
@@ -356,13 +323,10 @@ export class DatabaseService {
     try {
       // Validate travelProfileId parameter
       if (travelProfileId && typeof travelProfileId !== 'string') {
-        console.warn('getBudget: Invalid travelProfileId parameter:', travelProfileId)
         return null
       }
       
       const userId = await getCurrentUserId()
-      console.log('🔍 getBudget: User ID:', userId, 'travelProfileId:', travelProfileId || 'personal use')
-      
       let query = supabase
         .from('budgets')
         .select('*')
@@ -372,32 +336,21 @@ export class DatabaseService {
 
       if (travelProfileId) {
         query = query.eq('travel_profile_id', travelProfileId)
-        console.log('🔍 getBudget: Querying for travel profile:', travelProfileId)
       } else {
         query = query.is('travel_profile_id', null)
-        console.log('🔍 getBudget: Querying for personal use (no travel profile)')
       }
 
       const { data, error } = await query.single()
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned - this is normal for new users
-          console.log('🔍 No budget found (normal for new users)')
-          return null
-        }
-        console.error('❌ Error fetching budget:', error)
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         return null
       }
 
-      console.log('🔍 Budget fetched successfully:', data ? `€${data.amount}` : 'none')
       return data
     } catch (error) {
       if (error instanceof Error && error.message.includes('User not authenticated')) {
-        console.log('🔐 User not authenticated, returning null for budget')
         return null
       }
-      console.error('❌ Error in getBudget:', error)
       return null
     }
   }
@@ -439,9 +392,6 @@ export class DatabaseService {
 
   static async removeBudget(travelProfileId?: string): Promise<boolean> {
     try {
-      // Debug: Check what's in the budgets table
-      await this.debugBudgets()
-      
       // First, let's see what budgets exist for this user/profile
       const userId = await getCurrentUserId()
       let query = supabase
@@ -458,37 +408,27 @@ export class DatabaseService {
       const { data: existingBudgets, error: fetchError } = await query
 
       if (fetchError) {
-        console.error('Error fetching existing budgets:', fetchError)
         return false
       }
 
-      console.log('Found budgets to remove:', existingBudgets)
-
       if (!existingBudgets || existingBudgets.length === 0) {
-        console.log('No budgets found to remove')
         return true // Already removed
       }
 
       // Try to delete each budget individually to see which one fails
       for (const budget of existingBudgets) {
-        console.log('Attempting to delete budget:', budget.id)
         const { error } = await supabase
           .from('budgets')
           .delete()
           .eq('id', budget.id)
 
         if (error) {
-          console.error('Error deleting budget', budget.id, ':', error)
           return false
-        } else {
-          console.log('Successfully deleted budget:', budget.id)
         }
       }
 
-      console.log('Successfully removed all budgets')
       return true
     } catch (error) {
-      console.error('Error in removeBudget:', error)
       return false
     }
   }

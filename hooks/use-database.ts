@@ -38,7 +38,6 @@ export function useDatabase(travelProfileId: string | null) {
   const loadData = useCallback(async (retryCount = 0) => {
     // Don't load data if no travel profile is selected
     if (!travelProfileId) {
-      console.log('loadData: No travelProfileId provided, skipping load')
       setIsLoading(false)
       setIsInitialized(true)
       return
@@ -46,7 +45,6 @@ export function useDatabase(travelProfileId: string | null) {
     
     try {
       setIsLoading(true)
-      console.log(`loadData: Loading data for travelProfileId: ${travelProfileId} (attempt ${retryCount + 1})`)
       
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -91,22 +89,13 @@ export function useDatabase(travelProfileId: string | null) {
       setBudget(transformedBudget)
       setTravelCountdown(transformedCountdown)
       
-      console.log('loadData: Data loaded successfully:', {
-        expenses: transformedExpenses.length,
-        budget: transformedBudget ? `€${transformedBudget.amount}` : 'none',
-        countdown: transformedCountdown ? 'active' : 'none'
-      })
-      
       setIsInitialized(true)
     } catch (error) {
-      console.error(`Error loading data (attempt ${retryCount + 1}):`, error)
-      
       // Don't retry on authentication errors or if already initialized
       if (error instanceof Error && (
         error.message === 'User not authenticated' || 
         error.message === 'Data loading timeout'
       )) {
-        console.log('Stopping retry loop due to:', error.message)
         setIsInitialized(true)
         setIsLoading(false)
         return
@@ -114,7 +103,6 @@ export function useDatabase(travelProfileId: string | null) {
       
       // Retry logic (max 1 attempt)
       if (retryCount < 1) {
-        console.log(`Retrying data load (attempt ${retryCount + 2})...`)
         setTimeout(() => loadData(retryCount + 1), 2000) // Wait 2 seconds before retry
         return
       }
@@ -152,7 +140,6 @@ export function useDatabase(travelProfileId: string | null) {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('useDatabase: Auth session error:', error);
           if (mounted) {
             setIsInitialized(true);
             setIsLoading(false);
@@ -162,20 +149,17 @@ export function useDatabase(travelProfileId: string | null) {
         
         if (session?.user) {
           // User is authenticated, load data
-          console.log('useDatabase: User authenticated, loading data (travelProfileId:', travelProfileId || 'personal use', ')');
           if (mounted) {
             await loadData();
           }
         } else {
           // No user session, mark as initialized
-          console.log('useDatabase: No user session, marking as initialized');
           if (mounted) {
             setIsInitialized(true);
             setIsLoading(false);
           }
         }
       } catch (error) {
-        console.error('useDatabase: Initialization error:', error);
         if (mounted) {
           setIsInitialized(true);
           setIsLoading(false);
@@ -193,13 +177,9 @@ export function useDatabase(travelProfileId: string | null) {
   // Listen for auth state changes to reload data when user logs in
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('useDatabase: Auth state changed:', event, session?.user?.id ? 'user logged in' : 'no user');
-      
       if (event === 'SIGNED_IN' && session?.user && isInitialized) {
-        console.log('useDatabase: User signed in, reloading data');
         await loadData();
       } else if (event === 'SIGNED_OUT') {
-        console.log('useDatabase: User signed out, clearing data');
         clearData();
       }
     });
@@ -325,15 +305,8 @@ export function useDatabase(travelProfileId: string | null) {
 
   const removeBudget = useCallback(async () => {
     try {
-      console.log('=== REMOVE BUDGET DEBUG ===')
-      console.log('Current budget state:', budget)
-      console.log('Attempting to remove budget...')
-      
       const success = await DatabaseService.removeBudget(travelProfileId || undefined)
-      console.log('Remove budget result:', success)
-      
       if (success) {
-        console.log('Setting budget state to null')
         setBudget(null)
         toast({
           title: '🗑️ Budget Removed!',
@@ -341,7 +314,6 @@ export function useDatabase(travelProfileId: string | null) {
         })
         return true
       } else {
-        console.log('Budget removal failed in database service')
         toast({
           title: '❌ Budget Remove Failed',
           description: 'Failed to remove budget. Please try again.',
