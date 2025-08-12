@@ -22,8 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, X, Clock } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Calendar, Clock, X } from "lucide-react";
+import { memo, useCallback, useEffect, useState } from "react";
 
 interface CountdownTime {
   days: number;
@@ -32,7 +32,7 @@ interface CountdownTime {
   secs: number;
 }
 
-export function TravelCountdown({
+export const TravelCountdown = memo(function TravelCountdown({
   travelProfileId,
 }: {
   travelProfileId: string;
@@ -330,9 +330,7 @@ export function TravelCountdown({
               <div className="text-3xl font-bold text-emerald-900">
                 {formatNumber(countdown.mins)}
               </div>
-              <div className="text-sm text-emerald-600 font-medium">
-                Minutes
-              </div>
+              <div className="text-sm text-emerald-600 font-medium">Mins</div>
             </div>
           </div>
           <div className="text-center">
@@ -340,9 +338,7 @@ export function TravelCountdown({
               <div className="text-3xl font-bold text-emerald-900">
                 {formatNumber(countdown.secs)}
               </div>
-              <div className="text-sm text-emerald-600 font-medium">
-                Seconds
-              </div>
+              <div className="text-sm text-emerald-600 font-medium">Secs</div>
             </div>
           </div>
         </div>
@@ -422,7 +418,11 @@ export function TravelCountdown({
                 value={tempDate}
                 onChange={(e) => setTempDate(e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
-                className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900 bg-white"
+                style={{
+                  color: "#1e293b", // Ensure dark text for better visibility
+                  backgroundColor: "#ffffff",
+                }}
               />
             </div>
 
@@ -438,7 +438,11 @@ export function TravelCountdown({
                 type="time"
                 value={tempTime}
                 onChange={(e) => setTempTime(e.target.value)}
-                className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900 bg-white"
+                style={{
+                  color: "#1e293b", // Ensure dark text for better visibility
+                  backgroundColor: "#ffffff",
+                }}
               />
             </div>
 
@@ -491,4 +495,4 @@ export function TravelCountdown({
       </AlertDialog>
     </Card>
   );
-}
+});

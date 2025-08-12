@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { Check, Clock, Globe, Mail, Users, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 interface UserInvitation {
   id: string;
@@ -31,7 +31,7 @@ interface UserInvitation {
   };
 }
 
-export function InvitationManager() {
+export const InvitationManager = memo(function InvitationManager() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [invitations, setInvitations] = useState<UserInvitation[]>([]);
@@ -465,4 +465,4 @@ export function InvitationManager() {
       </div>
     </div>
   );
-}
+});

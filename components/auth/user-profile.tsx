@@ -11,11 +11,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { ChevronDown, LogOut, Settings, User, Users } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ProfileModal } from "./profile-modal";
 import { SettingsModal } from "./settings-modal";
 
-export function UserProfile() {
+export const UserProfile = memo(function UserProfile() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -140,4 +140,4 @@ export function UserProfile() {
       />
     </>
   );
-}
+});

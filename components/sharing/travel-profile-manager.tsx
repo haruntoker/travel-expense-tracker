@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { Globe, Plus, Settings, Trash2, UserPlus, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 interface TravelProfile {
   id: string;
@@ -40,7 +40,7 @@ interface UserInvitation {
   created_at: string;
 }
 
-export function TravelProfileManager() {
+export const TravelProfileManager = memo(function TravelProfileManager() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [profiles, setProfiles] = useState<TravelProfile[]>([]);
@@ -664,4 +664,4 @@ export function TravelProfileManager() {
       </Dialog>
     </div>
   );
-}
+});

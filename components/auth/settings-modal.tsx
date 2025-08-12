@@ -20,14 +20,17 @@ import {
   Settings,
   Shield,
 } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export const SettingsModal = memo(function SettingsModal({
+  isOpen,
+  onClose,
+}: SettingsModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -203,4 +206,4 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       </DialogContent>
     </Dialog>
   );
-}
+});

@@ -28,7 +28,7 @@ import {
   Settings,
   Wallet,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 
 export interface Expense {
@@ -46,7 +46,7 @@ const STORAGE_KEYS = {
   SELECTED_TRAVEL_PROFILE: "selected-travel-profile",
 } as const;
 
-export default function TravelExpensesTracker() {
+const TravelExpensesTracker = memo(function TravelExpensesTracker() {
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
   const [tempBudget, setTempBudget] = useState<number>(DEFAULT_BUDGET);
   const [isExporting, setIsExporting] = useState(false);
@@ -57,6 +57,9 @@ export default function TravelExpensesTracker() {
   const [travelProfiles, setTravelProfiles] = useState<any[]>([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
+  const [refreshTimeout, setRefreshTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const {
@@ -73,6 +76,30 @@ export default function TravelExpensesTracker() {
     clearData,
     isRefreshing,
   } = useDatabase(selectedTravelProfile);
+
+  // Debounced refresh function to prevent rapid successive calls
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      if (loadData) {
+        loadData(true); // Force reload
+      }
+    }, 300); // 300ms debounce
+
+    setRefreshTimeout(timeout);
+  }, [refreshTimeout, loadData]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+    };
+  }, [refreshTimeout]);
 
   // Debug: Log data state changes
   useEffect(() => {
@@ -186,7 +213,7 @@ export default function TravelExpensesTracker() {
     };
 
     loadTravelProfiles();
-  }, [user, selectedTravelProfile]);
+  }, [user]); // Remove selectedTravelProfile from dependencies to prevent infinite loops
 
   // Handle travel profile selection change
   const handleTravelProfileChange = useCallback(
@@ -216,13 +243,28 @@ export default function TravelExpensesTracker() {
     [loadData, clearData]
   );
 
-  // Reload data when travel profile changes
+  // Create a stable reference for the travel profile change handler
+  const stableHandleTravelProfileChange = useCallback(
+    async (profileId: string | null) => {
+      await handleTravelProfileChange(profileId);
+    },
+    [handleTravelProfileChange]
+  );
+
+  // Reload data when travel profile changes - only when necessary
   useEffect(() => {
-    if (selectedTravelProfile && loadData) {
+    if (selectedTravelProfile && loadData && isInitialized) {
       console.log("Travel profile changed to:", selectedTravelProfile);
       loadData(); // Refresh data for the new profile immediately
     }
-  }, [selectedTravelProfile, loadData]);
+  }, [selectedTravelProfile, isInitialized]); // Remove loadData from dependencies
+
+  // Create a stable reference for loadData to prevent unnecessary re-renders
+  const stableLoadData = useCallback(() => {
+    if (loadData) {
+      loadData();
+    }
+  }, [loadData]);
 
   // Only show database loading when user is authenticated (removed travel profile requirement)
   // Temporarily disabled to fix RLS policy issues
@@ -258,6 +300,94 @@ export default function TravelExpensesTracker() {
       budgetUsagePercentage >= 80 &&
       budgetUsagePercentage < 100,
     [budgetUsagePercentage, budget]
+  );
+
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleBudgetUpdate = useCallback(async () => {
+    if (!tempBudget || tempBudget <= 0) {
+      toast({
+        title: "❌ Invalid Budget",
+        description: "Please enter a valid budget amount greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const success = await setDatabaseBudget(tempBudget);
+      if (success) {
+        setIsBudgetDialogOpen(false);
+        toast({
+          title: "✅ Budget Updated!",
+          description: `Your travel budget is now €${tempBudget.toLocaleString()}`,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating budget:", error);
+      toast({
+        title: "❌ Update Failed",
+        description: "Failed to update budget. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [tempBudget, setDatabaseBudget, toast]);
+
+  // Create a stable reference for the budget update handler
+  const stableHandleBudgetUpdate = useCallback(() => {
+    handleBudgetUpdate();
+  }, [handleBudgetUpdate]);
+
+  const handleExpenseAdd = useCallback(
+    async (category: string, amount: number) => {
+      const success = await addExpense(category, amount);
+      if (success) {
+        // Reset form or show success message
+        console.log("Expense added successfully");
+      }
+    },
+    [addExpense]
+  );
+
+  const handleExpenseUpdate = useCallback(
+    async (id: string, amount: number, category?: string) => {
+      const success = await updateExpense(id, amount, category);
+      if (success) {
+        console.log("Expense updated successfully");
+      }
+    },
+    [updateExpense]
+  );
+
+  const handleExpenseDelete = useCallback(
+    async (id: string) => {
+      const success = await deleteExpense(id);
+      if (success) {
+        console.log("Expense deleted successfully");
+      }
+    },
+    [deleteExpense]
+  );
+
+  // Create stable references for expense handlers
+  const stableHandleExpenseAdd = useCallback(
+    (category: string, amount: number) => {
+      handleExpenseAdd(category, amount);
+    },
+    [handleExpenseAdd]
+  );
+
+  const stableHandleExpenseUpdate = useCallback(
+    (id: string, amount: number, category?: string) => {
+      handleExpenseUpdate(id, amount, category);
+    },
+    [handleExpenseUpdate]
+  );
+
+  const stableHandleExpenseDelete = useCallback(
+    (id: string) => {
+      handleExpenseDelete(id);
+    },
+    [handleExpenseDelete]
   );
 
   // Initialize temp budget when database budget loads or dialog opens
@@ -297,229 +427,7 @@ export default function TravelExpensesTracker() {
   }, [isInitialized, isLoading, totalSpent, budgetAmount, budget]);
 
   // Budget management
-  const handleBudgetUpdate = useCallback(async () => {
-    if (tempBudget < 0) {
-      toast({
-        title: "❌ Invalid Budget",
-        description: "Budget cannot be negative. Please enter a valid amount.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Handle removing budget (tempBudget = 0)
-    if (tempBudget === 0) {
-      console.log("Handling budget removal - tempBudget is 0");
-      console.log("Calling removeBudget() function...");
-
-      // Remove budget from database
-      const success = await removeBudget();
-      console.log("removeBudget() result:", success);
-
-      if (success) {
-        console.log(
-          "Budget removal successful, closing dialog and showing toast"
-        );
-        setIsBudgetDialogOpen(false);
-        setShowBudgetAlert(false); // Clear any budget alerts
-        toast({
-          title: "🗑️ Budget Removed",
-          description:
-            "Your budget has been removed. You can set a new one anytime.",
-        });
-      } else {
-        console.log("Budget removal failed");
-        toast({
-          title: "❌ Budget Removal Failed",
-          description: "Failed to remove budget. Please try again.",
-          variant: "destructive",
-        });
-      }
-      return;
-    }
-
-    // Handle setting/updating budget
-    const success = await setDatabaseBudget(tempBudget);
-    if (success) {
-      setIsBudgetDialogOpen(false);
-
-      // Check if new budget resolves the alert
-      if (totalSpent <= tempBudget) {
-        setShowBudgetAlert(false);
-      }
-
-      const budgetChange = tempBudget - (budget?.amount ?? 0);
-      const changeText =
-        budgetChange > 0
-          ? `increased by €${budgetChange.toLocaleString()}`
-          : budgetChange < 0
-          ? `decreased by €${Math.abs(budgetChange).toLocaleString()}`
-          : "remains the same";
-
-      toast({
-        title: "💰 Budget Updated Successfully!",
-        description: `Your budget has been ${changeText}. New total: €${tempBudget.toLocaleString()}`,
-      });
-    }
-  }, [tempBudget, totalSpent, budget, setDatabaseBudget, removeBudget, toast]);
-
   // Expense management
-  const handleUpdateExpense = useCallback(
-    async (id: string, amount: number, category?: string) => {
-      if (amount < 0) {
-        toast({
-          title: "❌ Invalid Amount",
-          description:
-            "Amount cannot be negative. Please enter a valid positive amount.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (category && !category.trim()) {
-        toast({
-          title: "❌ Invalid Category",
-          description:
-            "Category name cannot be empty. Please enter a valid category name.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const oldExpense = expenses.find((exp) => exp.id === id);
-      const oldAmount = oldExpense?.amount || 0;
-      const amountChange = amount - oldAmount;
-      const changeText =
-        amountChange > 0
-          ? `increased by €${amountChange.toLocaleString()}`
-          : amountChange < 0
-          ? `decreased by €${Math.abs(amountChange).toLocaleString()}`
-          : "remains the same";
-
-      const success = await updateExpense(id, amount, category);
-      if (success) {
-        // Check budget after update (only if budget is set)
-        if (budget?.amount) {
-          const newTotalSpent = totalSpent - oldAmount + amount;
-
-          if (newTotalSpent > budgetAmount) {
-            setShowBudgetAlert(true);
-            toast({
-              title: "⚠️ Budget Exceeded!",
-              description: `You've exceeded your budget by €${(
-                newTotalSpent - budgetAmount
-              ).toLocaleString()}. Consider adjusting your budget or reducing expenses.`,
-              variant: "destructive",
-            });
-          }
-        }
-
-        const updateMessage = category
-          ? `Expense "${category.trim()}" updated successfully! Amount ${changeText}.`
-          : `Expense amount updated successfully! ${changeText}.`;
-
-        toast({
-          title: "✏️ Expense Updated!",
-          description: updateMessage,
-        });
-      }
-    },
-    [expenses, budgetAmount, totalSpent, updateExpense, toast]
-  );
-
-  const handleAddExpense = useCallback(
-    async (category: string, amount: number) => {
-      if (!category.trim()) {
-        toast({
-          title: "❌ Invalid Category",
-          description:
-            "Category name cannot be empty. Please enter a valid category name.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (amount < 0) {
-        toast({
-          title: "❌ Invalid Amount",
-          description:
-            "Amount cannot be negative. Please enter a valid positive amount.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const success = await addExpense(category.trim(), amount);
-      if (success) {
-        // Check budget after adding (only if budget is set)
-        if (budget?.amount) {
-          const newTotalSpent = totalSpent + amount;
-          if (newTotalSpent > budgetAmount) {
-            setShowBudgetAlert(true);
-            toast({
-              title: "⚠️ Budget Exceeded!",
-              description: `You've exceeded your budget by €${(
-                newTotalSpent - budgetAmount
-              ).toLocaleString()}. Consider adjusting your budget or reducing expenses.`,
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "✅ New Expense Added!",
-              description: `Successfully added "${category.trim()}" for €${amount.toLocaleString()}. You have €${(
-                budgetAmount - newTotalSpent
-              ).toLocaleString()} remaining.`,
-            });
-          }
-        } else {
-          // No budget set - just show success message
-          toast({
-            title: "✅ New Expense Added!",
-            description: `Successfully added "${category.trim()}" for €${amount.toLocaleString()}.`,
-          });
-        }
-      }
-    },
-    [totalSpent, budgetAmount, addExpense, toast]
-  );
-
-  const handleDeleteExpense = useCallback(
-    async (id: string) => {
-      const expenseToDelete = expenses.find((exp) => exp.id === id);
-      const success = await deleteExpense(id);
-
-      if (success && expenseToDelete) {
-        if (budget?.amount) {
-          const newTotalSpent = totalSpent - expenseToDelete.amount;
-          const remainingText =
-            newTotalSpent <= budgetAmount
-              ? `You now have €${(
-                  budgetAmount - newTotalSpent
-                ).toLocaleString()} remaining.`
-              : `You're still over budget by €${(
-                  newTotalSpent - budgetAmount
-                ).toLocaleString()}.`;
-
-          toast({
-            title: "🗑️ Expense Deleted!",
-            description: `"${
-              expenseToDelete.category
-            }" (€${expenseToDelete.amount.toLocaleString()}) has been removed. ${remainingText}`,
-          });
-        } else {
-          // No budget set - just show deletion message
-          toast({
-            title: "🗑️ Expense Deleted!",
-            description: `"${
-              expenseToDelete.category
-            }" (€${expenseToDelete.amount.toLocaleString()}) has been removed.`,
-          });
-        }
-      }
-    },
-    [expenses, totalSpent, budgetAmount, deleteExpense, toast]
-  );
-
   // Export functionality
   const exportData = useCallback(
     async (format: "json" | "excel" = "json") => {
@@ -727,31 +635,6 @@ export default function TravelExpensesTracker() {
     );
   }
 
-  // Show message when no travel profile is selected - REMOVED FORCED SELECTION
-  // Users can now use the app without selecting a travel profile
-  // if (user && !selectedTravelProfile && !isLoadingProfiles) {
-  //   return (
-  //     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-  //       <div className="text-center space-y-6 max-w-md mx-auto p-6">
-  //         <Plane className="h-16 w-16 text-blue-600 mx-auto" />
-  //         <h2 className="text-2xl font-bold text-slate-900">
-  //           No Travel Profile Selected
-  //         </h2>
-  //         <p className="text-slate-600">
-  //           Please select a travel profile to start tracking expenses, or create
-  //           a new one.
-  //         </p>
-  //         <Button
-  //           onClick={() => window.open("/sharing", "_blank")}
-  //           className="bg-blue-600 hover:bg-blue-700"
-  //         >
-  //           Manage Travel Profiles
-  //         </Button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -768,7 +651,12 @@ export default function TravelExpensesTracker() {
               </h1>
             </div>
             <div className="flex-1 flex justify-end">
-              <UserProfile />
+              {/* User Profile */}
+              {user && (
+                <div className="mb-6">
+                  <UserProfile />
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center justify-center space-x-4">
@@ -777,7 +665,7 @@ export default function TravelExpensesTracker() {
               visualize spending patterns, and stay within budget.
             </p>
             {/* Manual Refresh Button */}
-            {user && isInitialized && !isLoading && (
+            {/* {user && isInitialized && !isLoading && (
               <Button
                 variant="outline"
                 size="sm"
@@ -794,7 +682,7 @@ export default function TravelExpensesTracker() {
                 </div>
                 Refresh
               </Button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -862,7 +750,7 @@ export default function TravelExpensesTracker() {
                   id="profile-select"
                   value={selectedTravelProfile || ""}
                   onChange={(e) =>
-                    handleTravelProfileChange(e.target.value || null)
+                    stableHandleTravelProfileChange(e.target.value || null)
                   }
                   disabled={isSwitchingProfile}
                   className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50"
@@ -1051,11 +939,14 @@ export default function TravelExpensesTracker() {
         )}
 
         {/* Travel Countdown */}
-        <div className="flex justify-center">
-          <div className="w-full max-w-2xl">
-            <TravelCountdown travelProfileId={selectedTravelProfile || ""} />
+        {user && isInitialized && !isLoading && (
+          <div className="mb-8">
+            <TravelCountdown
+              key={selectedTravelProfile || "personal"}
+              travelProfileId={selectedTravelProfile || ""}
+            />
           </div>
-        </div>
+        )}
 
         {/* Dashboard Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1192,7 +1083,7 @@ export default function TravelExpensesTracker() {
                           >
                             Cancel
                           </Button>
-                          <Button onClick={handleBudgetUpdate}>
+                          <Button onClick={stableHandleBudgetUpdate}>
                             {budget ? "Update Budget" : "Set Budget"}
                           </Button>
                         </div>
@@ -1513,16 +1404,25 @@ export default function TravelExpensesTracker() {
           {/* Expense Table */}
           <div className="space-y-6">
             <ExpenseTable
+              key={`table-${selectedTravelProfile || "personal"}`}
               expenses={expenses}
-              onUpdateExpense={handleUpdateExpense}
-              onAddExpense={handleAddExpense}
-              onDeleteExpense={handleDeleteExpense}
+              onUpdateExpense={stableHandleExpenseUpdate}
+              onAddExpense={stableHandleExpenseAdd}
+              onDeleteExpense={stableHandleExpenseDelete}
             />
           </div>
 
           {/* Charts */}
           <div className="space-y-6">
-            <ExpenseCharts expenses={expenses} />
+            {/* Expense Charts */}
+            {user && isInitialized && !isLoading && expenses.length > 0 && (
+              <div className="mb-8">
+                <ExpenseCharts
+                  key={`charts-${selectedTravelProfile || "personal"}`}
+                  expenses={expenses}
+                />
+              </div>
+            )}
           </div>
         </div>
         {/* Export Buttons */}
@@ -1582,4 +1482,6 @@ export default function TravelExpensesTracker() {
       </div>
     </div>
   );
-}
+});
+
+export default TravelExpensesTracker;

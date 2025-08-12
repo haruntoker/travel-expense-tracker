@@ -9,7 +9,7 @@ import {
   PieChart as PieChartIcon,
   TrendingUp,
 } from "lucide-react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import {
   Bar,
   BarChart,
@@ -76,7 +76,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
+export const ExpenseCharts = memo(function ExpenseCharts({
+  expenses,
+}: ExpenseChartsProps) {
   // Memoized chart data calculations
   const chartData = useMemo(() => {
     if (!expenses || expenses.length === 0) return [];
@@ -547,4 +549,4 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
       </CardContent>
     </Card>
   );
-}
+});

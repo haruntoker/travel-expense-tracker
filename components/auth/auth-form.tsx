@@ -14,9 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 
-export function AuthForm() {
+export const AuthForm = memo(function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
@@ -381,4 +381,4 @@ export function AuthForm() {
       </Card>
     </div>
   );
-}
+});

@@ -39,6 +39,9 @@ export function useDatabase(travelProfileId: string | null) {
   // Cache key for this profile
   const cacheKey = `data_${travelProfileId || 'personal'}`
 
+  // Debounce refresh to prevent rapid successive calls
+  const [refreshTimeout, setRefreshTimeout] = useState<NodeJS.Timeout | null>(null);
+
   // Check if we need to reload data (only reload if data is older than 5 minutes)
   const shouldReloadData = useCallback(() => {
     const now = Date.now()
@@ -167,6 +170,30 @@ export function useDatabase(travelProfileId: string | null) {
     }
   }, [travelProfileId, toast, expenses.length, shouldReloadData])
 
+  // Debounced load data function
+  const debouncedLoadData = useCallback((forceReload = false) => {
+    // Clear existing timeout
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout);
+    }
+
+    // Set new timeout for debounced execution
+    const timeout = setTimeout(() => {
+      loadData(forceReload);
+    }, 300); // 300ms debounce
+
+    setRefreshTimeout(timeout);
+  }, [refreshTimeout, loadData]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+    };
+  }, [refreshTimeout]);
+
   // Initialize data on mount - now allows data loading for both personal and travel profile use
   useEffect(() => {
     let mounted = true;
@@ -215,7 +242,7 @@ export function useDatabase(travelProfileId: string | null) {
     return () => {
       mounted = false;
     };
-  }, [travelProfileId, loadData]) // Only depend on travelProfileId
+  }, [travelProfileId]) // Remove loadData from dependencies
 
   // Reload data when travelProfileId changes (for profile switching)
   useEffect(() => {
@@ -223,7 +250,7 @@ export function useDatabase(travelProfileId: string | null) {
       console.log('useDatabase: travelProfileId changed, reloading data for:', travelProfileId);
       loadData();
     }
-  }, [travelProfileId, isInitialized, isLoading, loadData]) // Remove loadData from dependencies
+  }, [travelProfileId, isInitialized, isLoading]) // Remove loadData from dependencies
 
   // Listen for auth state changes to reload data when user logs in
   useEffect(() => {
@@ -240,7 +267,7 @@ export function useDatabase(travelProfileId: string | null) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isInitialized, loadData])
+  }, [isInitialized]) // Remove loadData from dependencies
 
   // Listen for page visibility changes to intelligently refresh data
   useEffect(() => {
@@ -256,7 +283,7 @@ export function useDatabase(travelProfileId: string | null) {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isInitialized, isLoading, shouldReloadData, loadData, expenses.length]);
+  }, [isInitialized, isLoading, shouldReloadData, expenses.length]); // Remove loadData from dependencies
 
   // Expense operations
   const addExpense = useCallback(async (category: string, amount: number) => {

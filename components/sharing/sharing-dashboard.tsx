@@ -1,14 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { Mail, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { InvitationManager } from "./invitation-manager";
 import { TravelProfileManager } from "./travel-profile-manager";
 
-export function SharingDashboard() {
+export const SharingDashboard = memo(function SharingDashboard() {
   const [activeTab, setActiveTab] = useState("profiles");
   const [dbStatus, setDbStatus] = useState<"checking" | "connected" | "error">(
     "checking"
@@ -204,4 +203,4 @@ export function SharingDashboard() {
       </Tabs>
     </div>
   );
-}
+});

@@ -13,14 +13,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { Calendar, Edit3, Mail, Save, Shield, User, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
+export const ProfileModal = memo(function ProfileModal({
+  isOpen,
+  onClose,
+}: ProfileModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -322,4 +325,4 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       </DialogContent>
     </Dialog>
   );
-}
+});

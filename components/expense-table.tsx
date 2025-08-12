@@ -33,7 +33,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 
 interface Expense {
   id: string;
@@ -53,7 +53,7 @@ interface ExpenseTableProps {
 type SortField = "category" | "amount" | "createdAt";
 type SortDirection = "asc" | "desc";
 
-export function ExpenseTable({
+export const ExpenseTable = memo(function ExpenseTable({
   expenses,
   onUpdateExpense,
   onAddExpense,
@@ -582,4 +582,4 @@ export function ExpenseTable({
       </Dialog>
     </Card>
   );
-}
+});
