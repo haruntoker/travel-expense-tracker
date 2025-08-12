@@ -17,7 +17,7 @@ interface AuthContextType {
   signUp: (
     email: string,
     password: string
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; message?: string }>;
   signIn: (
     email: string,
     password: string
@@ -29,6 +29,11 @@ interface AuthContextType {
   resetPassword: (
     email: string
   ) => Promise<{ success: boolean; error?: string }>;
+  testEmailConfiguration: () => Promise<{
+    success: boolean;
+    error?: string;
+    message?: string;
+  }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,6 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
+      console.log("🔍 SignUp: Starting signup process for:", email);
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -82,7 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
 
+      console.log("🔍 SignUp: Supabase response:", { data, error });
+
       if (error) {
+        console.error("🔍 SignUp: Error occurred:", error);
+
         // Provide user-friendly error messages
         let userMessage = "Failed to create account. Please try again.";
 
@@ -101,6 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (error.message.includes("Email rate limit exceeded")) {
           userMessage =
             "Too many email requests. Please wait before trying again.";
+        } else if (error.message.includes("Email provider not configured")) {
+          userMessage = "Email service not configured. Please contact support.";
+        } else if (error.message.includes("Email template not found")) {
+          userMessage =
+            "Email template not configured. Please contact support.";
         }
 
         return { success: false, error: userMessage };
@@ -108,11 +124,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data.user && !data.session) {
         // Email confirmation required
+        console.log("🔍 SignUp: User created, email confirmation required");
+        console.log("🔍 SignUp: User ID:", data.user.id);
+        console.log(
+          "🔍 SignUp: Email confirmed:",
+          data.user.email_confirmed_at
+        );
+        console.log("🔍 SignUp: Session:", data.session);
+
+        return {
+          success: true,
+          message:
+            "Account created! Please check your email to confirm your account before signing in.",
+        };
+      }
+
+      if (data.user && data.session) {
+        // User is automatically signed in (email confirmation might be disabled)
+        console.log("🔍 SignUp: User created and automatically signed in");
         return { success: true };
       }
 
-      return { success: true };
+      console.log("🔍 SignUp: Unexpected response format:", data);
+      return { success: false, error: "Unexpected response from server" };
     } catch (error) {
+      console.error("🔍 SignUp: Exception occurred:", error);
       return {
         success: false,
         error:
@@ -216,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       });
 
@@ -226,7 +262,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { success: true };
     } catch (error) {
-      return { success: false, error: "An unexpected error occurred" };
+      return {
+        success: false,
+        error:
+          "Network error. Please check your internet connection and try again.",
+      };
+    }
+  };
+
+  // Test email configuration
+  const testEmailConfiguration = async () => {
+    try {
+      console.log("🔍 Testing email configuration...");
+
+      // Try to send a magic link to test email delivery
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email: "test@example.com",
+        options: {
+          shouldCreateUser: false, // Don't create a user, just test email
+        },
+      });
+
+      if (error) {
+        console.error("🔍 Email test failed:", error);
+        return { success: false, error: error.message };
+      }
+
+      console.log("🔍 Email test successful:", data);
+      return {
+        success: true,
+        message: "Email configuration appears to be working",
+      };
+    } catch (error) {
+      console.error("🔍 Email test exception:", error);
+      return { success: false, error: "Failed to test email configuration" };
     }
   };
 
@@ -239,6 +308,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithMagicLink,
     signOut,
     resetPassword,
+    testEmailConfiguration,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

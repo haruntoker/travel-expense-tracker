@@ -27,7 +27,8 @@ export const AuthForm = memo(function AuthForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const { toast } = useToast();
-  const { signIn, signUp, signInWithMagicLink } = useAuth();
+  const { signIn, signUp, signInWithMagicLink, testEmailConfiguration } =
+    useAuth();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +96,7 @@ export const AuthForm = memo(function AuthForm() {
       toast({
         title: "✅ Account Created!",
         description:
+          result.message ||
           "Please check your email to confirm your account, then sign in.",
       });
       setActiveTab("signin");
@@ -136,6 +138,26 @@ export const AuthForm = memo(function AuthForm() {
         title: "❌ Magic Link Failed",
         description:
           result.error || "Failed to send magic link. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTestEmailConfig = async () => {
+    setIsLoading(true);
+    const result = await testEmailConfiguration();
+    setIsLoading(false);
+
+    if (result.success) {
+      toast({
+        title: "✅ Email Test Successful",
+        description:
+          result.message || "Email configuration appears to be working.",
+      });
+    } else {
+      toast({
+        title: "❌ Email Test Failed",
+        description: result.error || "Email configuration test failed.",
         variant: "destructive",
       });
     }
@@ -377,6 +399,25 @@ export const AuthForm = memo(function AuthForm() {
               </form>
             </TabsContent>
           </Tabs>
+
+          {/* Debug Section - Only in Development */}
+          {process.env.NODE_ENV === "development" && (
+            <div className="mt-6 pt-4 border-t border-slate-200">
+              <div className="text-center">
+                <p className="text-xs text-slate-500 mb-2">Debug Tools</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestEmailConfig}
+                  disabled={isLoading}
+                  className="text-xs border-slate-300 text-slate-600 hover:bg-slate-50"
+                >
+                  Test Email Configuration
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

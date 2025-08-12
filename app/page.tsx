@@ -1429,12 +1429,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
             {/* Expense Analytics */}
             {user && isInitialized && !isLoading && (
               <div className="space-y-6">
-                {/* <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-slate-900 flex items-center space-x-2">
-                    <BarChart3 className="h-5 w-5 text-blue-600" />
-                    <span>Expense Analytics</span>
-                  </h2>
-                </div> */}
+              
 
                 {expenses.length > 0 ? (
                   <ExpenseCharts
