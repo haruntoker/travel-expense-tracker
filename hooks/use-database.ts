@@ -197,7 +197,7 @@ export function useDatabase(travelProfileId: string | null) {
       console.log('useDatabase: travelProfileId changed, reloading data for:', travelProfileId);
       loadData();
     }
-  }, [travelProfileId, isInitialized, isLoading, loadData])
+  }, [travelProfileId, isInitialized, isLoading]) // Remove loadData from dependencies
 
   // Listen for auth state changes to reload data when user logs in
   useEffect(() => {
@@ -214,7 +214,7 @@ export function useDatabase(travelProfileId: string | null) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isInitialized, loadData, clearData])
+  }, [isInitialized]) // Remove loadData and clearData from dependencies
 
   // Expense operations
   const addExpense = useCallback(async (category: string, amount: number) => {

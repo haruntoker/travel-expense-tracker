@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 import {
   AlertTriangle,
   CheckCircle,
@@ -46,33 +47,31 @@ const STORAGE_KEYS = {
 } as const;
 
 export default function TravelExpensesTracker() {
-  // Add error boundary for initialization errors
-  try {
-    const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
-    const [tempBudget, setTempBudget] = useState<number>(DEFAULT_BUDGET);
-    const [isExporting, setIsExporting] = useState(false);
-    const [showBudgetAlert, setShowBudgetAlert] = useState(false);
-    const [selectedTravelProfile, setSelectedTravelProfile] = useState<
-      string | null
-    >(null);
-    const [travelProfiles, setTravelProfiles] = useState<any[]>([]);
-    const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
-    const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
-    const { toast } = useToast();
-    const { user, loading: authLoading } = useAuth();
-    const {
-      expenses,
-      budget,
-      isLoading,
-      isInitialized,
-      addExpense,
-      updateExpense,
-      deleteExpense,
-      setBudget: setDatabaseBudget,
-      removeBudget,
-      loadData,
-      clearData,
-    } = useDatabase(selectedTravelProfile);
+  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
+  const [tempBudget, setTempBudget] = useState<number>(DEFAULT_BUDGET);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showBudgetAlert, setShowBudgetAlert] = useState(false);
+  const [selectedTravelProfile, setSelectedTravelProfile] = useState<
+    string | null
+  >(null);
+  const [travelProfiles, setTravelProfiles] = useState<any[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
+  const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const {
+    expenses,
+    budget,
+    isLoading,
+    isInitialized,
+    addExpense,
+    updateExpense,
+    deleteExpense,
+    setBudget: setDatabaseBudget,
+    removeBudget,
+    loadData,
+    clearData,
+  } = useDatabase(selectedTravelProfile);
 
     // Debug: Log data state changes
     useEffect(() => {
@@ -122,7 +121,7 @@ export default function TravelExpensesTracker() {
         setIsLoadingProfiles(true);
         try {
           // Use the existing Supabase client from auth context
-          const { supabase } = await import("@/lib/supabase");
+          // const { supabase } = await import("@/lib/supabase");
 
           // Get profiles where user is owner
           const { data: ownedProfiles } = await supabase
@@ -1540,20 +1539,4 @@ export default function TravelExpensesTracker() {
         </div>
       </div>
     );
-  } catch (error) {
-    console.error("Error initializing TravelExpensesTracker:", error);
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <div className="text-lg text-slate-700">
-            An error occurred during app initialization.
-          </div>
-          <p className="text-slate-600">
-            Please try refreshing the page or contact support.
-          </p>
-        </div>
-      </div>
-    );
-  }
 }
