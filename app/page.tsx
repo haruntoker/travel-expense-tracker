@@ -72,6 +72,17 @@ export default function TravelExpensesTracker() {
     clearData,
   } = useDatabase(selectedTravelProfile);
 
+  // Debug: Log data state changes
+  useEffect(() => {
+    console.log("🔍 Main page data state:", {
+      expenses: expenses.length,
+      budget: budget ? `€${budget.amount}` : "none",
+      selectedTravelProfile,
+      isLoading,
+      isInitialized,
+    });
+  }, [expenses, budget, selectedTravelProfile, isLoading, isInitialized]);
+
   // Load selected travel profile from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -906,59 +917,94 @@ export default function TravelExpensesTracker() {
           </div>
         )} */}
 
-        {/* Budget Alert Banner - Only show if budget is set */}
+        {/* Debug Section - Remove in production */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              🔧 Debug Panel
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  console.log("🔍 Manual data load triggered");
+                  loadData();
+                }}
+                className="text-gray-700"
+              >
+                Reload Data
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  console.log("🔍 Current state:", {
+                    expenses: expenses.length,
+                    budget: budget ? `€${budget.amount}` : "none",
+                    selectedTravelProfile,
+                    isLoading,
+                    isInitialized,
+                  });
+                }}
+                className="text-gray-700"
+              >
+                Log State
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  console.log("🔍 Testing database connection...");
+                  import("@/lib/database").then(({ DatabaseService }) => {
+                    DatabaseService.testConnection().then((result) => {
+                      console.log("Database connection test result:", result);
+                    });
+                  });
+                }}
+                className="text-gray-700"
+              >
+                Test DB Connection
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Budget Exceeded Alert - Mobile Optimized */}
         {budget?.amount && showBudgetAlert && (
-          <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg p-4 shadow-lg animate-pulse">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-                <div>
-                  <h3 className="text-lg font-semibold text-red-800">
+          <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg p-4 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-semibold text-red-800">
                     Budget Exceeded!
                   </h3>
-                  <p className="text-red-700">
+                  <p className="text-sm text-red-700 mt-1">
                     You've exceeded your budget by €
                     {Math.abs(remainingBudget).toLocaleString()}. Consider
                     adjusting your budget or reducing expenses.
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowBudgetAlert(false)}
-                className="border-red-300 text-red-700 hover:bg-red-100"
-              >
-                Dismiss
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Near Budget Warning - Only show if budget is set */}
-        {budget?.amount && !showBudgetAlert && isNearBudget && (
-          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <AlertTriangle className="h-6 w-6 text-amber-600" />
-                <div>
-                  <h3 className="text-lg font-semibold text-amber-800">
-                    Budget Warning
-                  </h3>
-                  <p className="text-amber-700">
-                    You've used {budgetUsagePercentage}% of your budget. You
-                    have €{remainingBudget.toLocaleString()} remaining.
-                  </p>
-                </div>
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsBudgetDialogOpen(true)}
+                  className="border-red-300 text-red-700 hover:bg-red-100 w-full sm:w-auto"
+                >
+                  Adjust Budget
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowBudgetAlert(false)}
+                  className="text-red-600 hover:bg-red-100 w-full sm:w-auto"
+                >
+                  Dismiss
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsBudgetDialogOpen(true)}
-                className="border-amber-300 text-amber-700 hover:bg-amber-100"
-              >
-                Adjust Budget
-              </Button>
             </div>
           </div>
         )}
@@ -972,14 +1018,59 @@ export default function TravelExpensesTracker() {
 
         {/* Dashboard Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Budget Card */}
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
+          {/* Budget Card - Now includes warnings */}
+          <Card
+            className={`bg-gradient-to-br border shadow-lg hover:shadow-xl transition-all duration-300 ${
+              !budget?.amount
+                ? "from-slate-50 to-slate-100 border-slate-200"
+                : isOverBudget
+                ? "from-red-50 to-red-100 border-red-200"
+                : isNearBudget
+                ? "from-amber-50 to-yellow-100 border-amber-200"
+                : "from-blue-50 to-blue-100 border-blue-200"
+            }`}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-800">
+              <CardTitle
+                className={`text-sm font-medium ${
+                  !budget?.amount
+                    ? "text-slate-800"
+                    : isOverBudget
+                    ? "text-red-800"
+                    : isNearBudget
+                    ? "text-amber-800"
+                    : "text-blue-800"
+                }`}
+              >
                 Total Budget
+                {budget?.amount && (
+                  <span
+                    className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      isOverBudget
+                        ? "bg-red-100 text-red-800 border border-red-200"
+                        : isNearBudget
+                        ? "bg-amber-100 text-amber-800 border border-amber-200"
+                        : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    }`}
+                  >
+                    {isOverBudget
+                      ? "⚠️ Exceeded"
+                      : isNearBudget
+                      ? "⚠️ Warning"
+                      : "✅ Safe"}
+                  </span>
+                )}
               </CardTitle>
               <div className="flex items-center space-x-2">
-                <Wallet className="h-4 w-4 text-blue-700" />
+                {!budget?.amount ? (
+                  <Wallet className="h-4 w-4 text-slate-700" />
+                ) : isOverBudget ? (
+                  <AlertTriangle className="h-4 w-4 text-red-700" />
+                ) : isNearBudget ? (
+                  <AlertTriangle className="h-4 w-4 text-amber-700" />
+                ) : (
+                  <Wallet className="h-4 w-4 text-blue-700" />
+                )}
                 <Dialog
                   open={isBudgetDialogOpen}
                   onOpenChange={setIsBudgetDialogOpen}
@@ -988,9 +1079,27 @@ export default function TravelExpensesTracker() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 hover:bg-blue-200 transition-colors"
+                      className={`h-6 w-6 p-0 transition-colors ${
+                        !budget?.amount
+                          ? "hover:bg-slate-200"
+                          : isOverBudget
+                          ? "hover:bg-red-200"
+                          : isNearBudget
+                          ? "hover:bg-amber-200"
+                          : "hover:bg-blue-200"
+                      }`}
                     >
-                      <Settings className="h-3 w-3 text-blue-700" />
+                      <Settings
+                        className={`h-3 w-3 ${
+                          !budget?.amount
+                            ? "text-slate-700"
+                            : isOverBudget
+                            ? "text-red-700"
+                            : isNearBudget
+                            ? "text-amber-700"
+                            : "text-blue-700"
+                        }`}
+                      />
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -1055,12 +1164,53 @@ export default function TravelExpensesTracker() {
             <CardContent>
               {budget?.amount ? (
                 <>
-                  <div className="text-3xl font-bold text-blue-900">
+                  <div
+                    className={`text-3xl font-bold ${
+                      isOverBudget
+                        ? "text-red-900"
+                        : isNearBudget
+                        ? "text-amber-900"
+                        : "text-blue-900"
+                    }`}
+                  >
                     €{budgetAmount.toLocaleString()}
                   </div>
-                  <p className="text-xs text-blue-700 mt-1">
-                    Customizable travel budget
-                  </p>
+
+                  {/* Warning/Status Info - Mobile Optimized */}
+                  <div className="mt-2 space-y-1">
+                    {isOverBudget ? (
+                      <div className="text-sm text-red-700 font-medium">
+                        ⚠️ Over budget by €
+                        {Math.abs(remainingBudget).toLocaleString()}
+                      </div>
+                    ) : isNearBudget ? (
+                      <div className="text-sm text-amber-700 font-medium">
+                        ⚠️ {budgetUsagePercentage}% used - €
+                        {remainingBudget.toLocaleString()} remaining
+                      </div>
+                    ) : (
+                      <div className="text-sm text-blue-700 font-medium">
+                        ✅ {budgetUsagePercentage}% used - €
+                        {remainingBudget.toLocaleString()} remaining
+                      </div>
+                    )}
+
+                    {/* Quick Action Button for Warnings */}
+                    {(isOverBudget || isNearBudget) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsBudgetDialogOpen(true)}
+                        className={`mt-2 w-full text-xs ${
+                          isOverBudget
+                            ? "border-red-300 text-red-700 hover:bg-red-100"
+                            : "border-amber-300 text-amber-700 hover:bg-amber-100"
+                        }`}
+                      >
+                        {isOverBudget ? "Increase Budget" : "Adjust Budget"}
+                      </Button>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>
@@ -1164,6 +1314,28 @@ export default function TravelExpensesTracker() {
                       ? "⚠️ Near budget limit"
                       : "✅ Within budget"}
                   </p>
+
+                  {/* Mobile-friendly progress indicator */}
+                  <div className="mt-3">
+                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-500 ${
+                          isOverBudget
+                            ? "bg-red-500"
+                            : isNearBudget
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                        }`}
+                        style={{
+                          width: `${Math.min(budgetUsagePercentage, 100)}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-600 mt-1">
+                      <span>0%</span>
+                      <span>{budgetUsagePercentage}%</span>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <>

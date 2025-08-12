@@ -101,8 +101,10 @@ export class DatabaseService {
 
       if (travelProfileId) {
         query = query.eq('travel_profile_id', travelProfileId)
+        console.log('🔍 getTravelCountdown: Querying for travel profile:', travelProfileId)
       } else {
         query = query.eq('user_id', userId).is('travel_profile_id', null)
+        console.log('🔍 getTravelCountdown: Querying for personal use (no travel profile)')
       }
 
       const { data, error } = await query.single()
@@ -126,7 +128,7 @@ export class DatabaseService {
       }
       console.error('❌ Error in getTravelCountdown:', error)
       return null
-      }
+    }
   }
 
   static async setTravelCountdown(travelDate: string, travelProfileId?: string): Promise<TravelCountdown | null> {
@@ -215,6 +217,8 @@ export class DatabaseService {
       }
       
       const userId = await getCurrentUserId()
+      console.log('🔍 getExpenses: User ID:', userId, 'travelProfileId:', travelProfileId || 'personal use')
+      
       let query = supabase
         .from('expenses')
         .select('*')
@@ -223,8 +227,10 @@ export class DatabaseService {
 
       if (travelProfileId) {
         query = query.eq('travel_profile_id', travelProfileId)
+        console.log('🔍 getExpenses: Querying for travel profile:', travelProfileId)
       } else {
         query = query.is('travel_profile_id', null)
+        console.log('🔍 getExpenses: Querying for personal use (no travel profile)')
       }
 
       const { data, error } = await query
@@ -355,6 +361,8 @@ export class DatabaseService {
       }
       
       const userId = await getCurrentUserId()
+      console.log('🔍 getBudget: User ID:', userId, 'travelProfileId:', travelProfileId || 'personal use')
+      
       let query = supabase
         .from('budgets')
         .select('*')
@@ -364,13 +372,20 @@ export class DatabaseService {
 
       if (travelProfileId) {
         query = query.eq('travel_profile_id', travelProfileId)
+        console.log('🔍 getBudget: Querying for travel profile:', travelProfileId)
       } else {
         query = query.is('travel_profile_id', null)
+        console.log('🔍 getBudget: Querying for personal use (no travel profile)')
       }
 
       const { data, error } = await query.single()
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows returned - this is normal for new users
+          console.log('🔍 No budget found (normal for new users)')
+          return null
+        }
         console.error('❌ Error fetching budget:', error)
         return null
       }

@@ -28,8 +28,8 @@ import { useCallback, useEffect, useState } from "react";
 interface CountdownTime {
   days: number;
   hours: number;
-  minutes: number;
-  seconds: number;
+  mins: number;
+  secs: number;
 }
 
 export function TravelCountdown({
@@ -40,8 +40,8 @@ export function TravelCountdown({
   const [countdown, setCountdown] = useState<CountdownTime>({
     days: 0,
     hours: 0,
-    minutes: 0,
-    seconds: 0,
+    mins: 0,
+    secs: 0,
   });
   const [isEditing, setIsEditing] = useState(false);
   const [tempDate, setTempDate] = useState<string>("");
@@ -67,7 +67,7 @@ export function TravelCountdown({
       const difference = target - now;
 
       if (difference <= 0) {
-        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
         toast({
           title: "🎉 Travel Day! 🎉",
           description:
@@ -80,8 +80,8 @@ export function TravelCountdown({
       const hours = Math.floor(
         (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
       );
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+      const mins = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((difference % (1000 * 60)) / 1000);
 
       // Show milestone notifications
       if (days === 1 && countdown.days > 1) {
@@ -103,7 +103,7 @@ export function TravelCountdown({
         });
       }
 
-      setCountdown({ days, hours, minutes, seconds });
+      setCountdown({ days, hours, mins, secs });
     }, 1000);
 
     return () => clearInterval(timer);
@@ -328,7 +328,7 @@ export function TravelCountdown({
           <div className="text-center">
             <div className="bg-white rounded-lg border border-emerald-200 p-4 shadow-sm">
               <div className="text-3xl font-bold text-emerald-900">
-                {formatNumber(countdown.minutes)}
+                {formatNumber(countdown.mins)}
               </div>
               <div className="text-sm text-emerald-600 font-medium">
                 Minutes
@@ -338,7 +338,7 @@ export function TravelCountdown({
           <div className="text-center">
             <div className="bg-white rounded-lg border border-emerald-200 p-4 shadow-sm">
               <div className="text-3xl font-bold text-emerald-900">
-                {formatNumber(countdown.seconds)}
+                {formatNumber(countdown.secs)}
               </div>
               <div className="text-sm text-emerald-600 font-medium">
                 Seconds

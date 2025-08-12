@@ -36,17 +36,9 @@ export function useDatabase(travelProfileId: string | null) {
 
   // Load all data from database with retry mechanism
   const loadData = useCallback(async (retryCount = 0) => {
-    // Don't load data if no travel profile is selected
-    if (!travelProfileId) {
-      console.log('loadData: No travelProfileId provided, skipping load')
-      setIsLoading(false)
-      setIsInitialized(true)
-      return
-    }
-    
     try {
       setIsLoading(true)
-      console.log(`loadData: Loading data for travelProfileId: ${travelProfileId} (attempt ${retryCount + 1})`)
+      console.log(`loadData: Loading data for travelProfileId: ${travelProfileId || 'personal use'} (attempt ${retryCount + 1})`)
       
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -54,9 +46,9 @@ export function useDatabase(travelProfileId: string | null) {
       })
       
       const dataPromise = Promise.all([
-        DatabaseService.getExpenses(travelProfileId),
-        DatabaseService.getBudget(travelProfileId),
-        DatabaseService.getTravelCountdown(travelProfileId),
+        DatabaseService.getExpenses(travelProfileId || undefined),
+        DatabaseService.getBudget(travelProfileId || undefined),
+        DatabaseService.getTravelCountdown(travelProfileId || undefined),
       ])
       
       const [expensesData, budgetData, countdownData] = await Promise.race([dataPromise, timeoutPromise])
@@ -129,23 +121,90 @@ export function useDatabase(travelProfileId: string | null) {
 
   // Initialize data on mount - now allows data loading without travel profile
   useEffect(() => {
-    // Don't load data if user is not authenticated
-    if (typeof window !== 'undefined') {
-      // Check if we have a user session
-      supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
-        if (session?.user) {
-          // Always load data when user is authenticated, regardless of travel profile
-          console.log('useDatabase: User authenticated, loading data (travelProfileId:', travelProfileId || 'none', ')')
-          loadData()
-        } else {
-          // No user session, mark as initialized but don't load data
-          console.log('useDatabase: No user session')
-          setIsInitialized(true)
-          setIsLoading(false)
+    let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    const initializeData = async () => {
+      try {
+        // Check if we have a user session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('useDatabase: Auth session error:', error);
+          if (mounted) {
+            setIsInitialized(true);
+            setIsLoading(false);
+          }
+          return;
         }
-      })
+        
+        if (session?.user) {
+          // User is authenticated, load data
+          console.log('useDatabase: User authenticated, loading data (travelProfileId:', travelProfileId || 'personal use', ')');
+          if (mounted) {
+            await loadData();
+          }
+        } else {
+          // No user session, retry a few times in case session is still loading
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`useDatabase: No user session, retrying in 1 second (attempt ${retryCount}/${maxRetries})`);
+            setTimeout(() => {
+              if (mounted) {
+                initializeData();
+              }
+            }, 1000);
+            return;
+          }
+          
+          // Max retries reached, mark as initialized
+          console.log('useDatabase: No user session after retries, marking as initialized');
+          if (mounted) {
+            setIsInitialized(true);
+            setIsLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error('useDatabase: Initialization error:', error);
+        if (mounted) {
+          setIsInitialized(true);
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    initializeData();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [loadData])
+
+  // Reload data when travelProfileId changes (for profile switching)
+  useEffect(() => {
+    if (isInitialized && !isLoading) {
+      console.log('useDatabase: travelProfileId changed, reloading data:', travelProfileId || 'personal use');
+      loadData();
     }
-  }, [loadData, travelProfileId])
+  }, [travelProfileId, isInitialized, isLoading, loadData])
+
+  // Listen for auth state changes to reload data when user logs in
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('useDatabase: Auth state changed:', event, session?.user?.id ? 'user logged in' : 'no user');
+      
+      if (event === 'SIGNED_IN' && session?.user && isInitialized) {
+        console.log('useDatabase: User signed in, reloading data');
+        await loadData();
+      } else if (event === 'SIGNED_OUT') {
+        console.log('useDatabase: User signed out, clearing data');
+        clearData();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [loadData, clearData, isInitialized])
 
   // Expense operations
   const addExpense = useCallback(async (category: string, amount: number) => {

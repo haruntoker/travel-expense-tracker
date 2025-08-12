@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
     "dev": "next dev",
-    "lint": "next lint",
+    "build": "next build",
     "start": "next start",
+    "lint": "next lint",
     "setup": "node scripts/setup-supabase.js",
     "test:connection": "node scripts/test-connection.js",
-    "verify:schema": "node scripts/verify-schema.js"
+    "verify:schema": "node scripts/verify-schema.js",
+    "test:persistence": "node scripts/test-data-persistence.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
