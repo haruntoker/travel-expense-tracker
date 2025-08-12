@@ -36,28 +36,29 @@ export function useDatabase(travelProfileId: string | null) {
 
   // Load all data from database with retry mechanism
   const loadData = useCallback(async (retryCount = 0) => {
-    // Don't load data if no travel profile is selected
-    if (!travelProfileId) {
-      setIsLoading(false)
-      setIsInitialized(true)
-      return
-    }
-    
     try {
-      setIsLoading(true)
+      console.log('🔍 loadData: Starting data load for travelProfileId:', travelProfileId || 'personal use', 'attempt:', retryCount + 1);
+      setIsLoading(true);
       
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Data loading timeout')), 30000) // 30 second timeout
       })
       
+      // Always attempt to load data - pass undefined for personal use, travelProfileId for profiles
       const dataPromise = Promise.all([
-        DatabaseService.getExpenses(travelProfileId),
-        DatabaseService.getBudget(travelProfileId),
-        DatabaseService.getTravelCountdown(travelProfileId),
+        DatabaseService.getExpenses(travelProfileId || undefined),
+        DatabaseService.getBudget(travelProfileId || undefined),
+        DatabaseService.getTravelCountdown(travelProfileId || undefined),
       ])
       
       const [expensesData, budgetData, countdownData] = await Promise.race([dataPromise, timeoutPromise])
+
+      console.log('🔍 loadData: Raw data received:', {
+        expenses: expensesData?.length || 0,
+        budget: budgetData ? `€${budgetData.amount}` : 'none',
+        countdown: countdownData ? 'active' : 'none'
+      });
 
       // Transform expenses data
       const transformedExpenses = expensesData.map((expense: any) => ({
@@ -89,13 +90,22 @@ export function useDatabase(travelProfileId: string | null) {
       setBudget(transformedBudget)
       setTravelCountdown(transformedCountdown)
       
+      console.log('🔍 loadData: Data loaded successfully:', {
+        expenses: transformedExpenses.length,
+        budget: transformedBudget ? `€${transformedBudget.amount}` : 'none',
+        countdown: transformedCountdown ? 'active' : 'none'
+      });
+      
       setIsInitialized(true)
     } catch (error) {
+      console.error('🔍 loadData: Error loading data (attempt', retryCount + 1, '):', error);
+      
       // Don't retry on authentication errors or if already initialized
       if (error instanceof Error && (
         error.message === 'User not authenticated' || 
         error.message === 'Data loading timeout'
       )) {
+        console.log('🔍 loadData: Not retrying due to error type:', error.message);
         setIsInitialized(true)
         setIsLoading(false)
         return
@@ -103,9 +113,14 @@ export function useDatabase(travelProfileId: string | null) {
       
       // Retry logic (max 1 attempt)
       if (retryCount < 1) {
+        console.log('🔍 loadData: Retrying data load in 2 seconds...');
         setTimeout(() => loadData(retryCount + 1), 2000) // Wait 2 seconds before retry
         return
       }
+      
+      // Mark as initialized even on error to prevent infinite loops
+      setIsInitialized(true)
+      setIsLoading(false)
       
       // Handle timeout errors specifically
       if (error instanceof Error && error.message === 'Data loading timeout') {
@@ -121,25 +136,24 @@ export function useDatabase(travelProfileId: string | null) {
           variant: 'destructive',
         })
       }
-      
-      // Mark as initialized even on error to prevent infinite loops
-      setIsInitialized(true)
-      setIsLoading(false)
     } finally {
       setIsLoading(false)
     }
   }, [travelProfileId, toast])
 
-  // Initialize data on mount - but only if user is authenticated and has a travel profile
+  // Initialize data on mount - now allows data loading for both personal and travel profile use
   useEffect(() => {
     let mounted = true;
     
     const initializeData = async () => {
       try {
+        console.log('🔍 useDatabase: Initializing data for travelProfileId:', travelProfileId || 'personal use');
+        
         // Check if we have a user session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
+          console.error('useDatabase: Auth session error:', error);
           if (mounted) {
             setIsInitialized(true);
             setIsLoading(false);
@@ -148,11 +162,13 @@ export function useDatabase(travelProfileId: string | null) {
         }
         
         if (session?.user) {
-          // User is authenticated, load data
+          console.log('useDatabase: User authenticated, loading data for:', travelProfileId || 'personal use');
+          // User is authenticated, load data (for personal use or travel profile)
           if (mounted) {
             await loadData();
           }
         } else {
+          console.log('useDatabase: No user session, marking as initialized');
           // No user session, mark as initialized
           if (mounted) {
             setIsInitialized(true);
@@ -160,6 +176,7 @@ export function useDatabase(travelProfileId: string | null) {
           }
         }
       } catch (error) {
+        console.error('useDatabase: Initialization error:', error);
         if (mounted) {
           setIsInitialized(true);
           setIsLoading(false);
@@ -174,18 +191,30 @@ export function useDatabase(travelProfileId: string | null) {
     };
   }, [travelProfileId]) // Only depend on travelProfileId
 
+  // Reload data when travelProfileId changes (for profile switching)
+  useEffect(() => {
+    if (isInitialized && !isLoading && travelProfileId) {
+      console.log('useDatabase: travelProfileId changed, reloading data for:', travelProfileId);
+      loadData();
+    }
+  }, [travelProfileId, isInitialized, isLoading, loadData])
+
   // Listen for auth state changes to reload data when user logs in
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('useDatabase: Auth state changed:', event, session?.user?.id ? 'user logged in' : 'no user');
+      
       if (event === 'SIGNED_IN' && session?.user && isInitialized) {
+        console.log('useDatabase: User signed in, reloading data');
         await loadData();
       } else if (event === 'SIGNED_OUT') {
+        console.log('useDatabase: User signed out, clearing data');
         clearData();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [isInitialized]) // Only depend on isInitialized
+  }, [isInitialized, loadData, clearData])
 
   // Expense operations
   const addExpense = useCallback(async (category: string, amount: number) => {
