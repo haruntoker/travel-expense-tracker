@@ -27,7 +27,11 @@ interface CountdownTime {
   seconds: number;
 }
 
-export function TravelCountdown({ travelProfileId }: { travelProfileId: string }) {
+export function TravelCountdown({
+  travelProfileId,
+}: {
+  travelProfileId: string;
+}) {
   const [countdown, setCountdown] = useState<CountdownTime>({
     days: 0,
     hours: 0,
@@ -38,12 +42,36 @@ export function TravelCountdown({ travelProfileId }: { travelProfileId: string }
   const [tempDate, setTempDate] = useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Only use database hook if we have a travel profile ID
   const { travelCountdown, setTravelCountdown, clearTravelCountdown } =
-    useDatabase(travelProfileId);
+    useDatabase(travelProfileId || null);
 
   // Get travel date from database state
   const travelDate = travelCountdown?.travelDate || "";
   const isActive = travelCountdown?.isActive || false;
+
+  // If no travel profile is selected, show a simple message
+  if (!travelProfileId) {
+    return (
+      <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 shadow-lg">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center space-x-3">
+              <Plane className="h-8 w-8 text-slate-400" />
+              <h3 className="text-lg font-semibold text-slate-700">
+                Personal Travel Countdown
+              </h3>
+            </div>
+            <p className="text-slate-600">
+              Select a travel profile to set up a countdown, or continue using
+              the app for personal expense tracking.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Countdown timer effect
   useEffect(() => {

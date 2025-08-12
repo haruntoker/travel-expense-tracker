@@ -127,22 +127,16 @@ export function useDatabase(travelProfileId: string | null) {
     }
   }, [travelProfileId, toast])
 
-  // Initialize data on mount - but only if user is authenticated and has a travel profile
+  // Initialize data on mount - now allows data loading without travel profile
   useEffect(() => {
     // Don't load data if user is not authenticated
     if (typeof window !== 'undefined') {
       // Check if we have a user session
       supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
         if (session?.user) {
-          if (travelProfileId) {
-            console.log('useDatabase: User authenticated, loading data for profile:', travelProfileId)
-            loadData()
-          } else {
-            // No travel profile selected yet, mark as initialized but don't load data
-            console.log('useDatabase: User authenticated but no travel profile selected')
-            setIsInitialized(true)
-            setIsLoading(false)
-          }
+          // Always load data when user is authenticated, regardless of travel profile
+          console.log('useDatabase: User authenticated, loading data (travelProfileId:', travelProfileId || 'none', ')')
+          loadData()
         } else {
           // No user session, mark as initialized but don't load data
           console.log('useDatabase: No user session')

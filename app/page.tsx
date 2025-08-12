@@ -211,11 +211,9 @@ export default function TravelExpensesTracker() {
     }
   }, [selectedTravelProfile, loadData]);
 
-  // Only show database loading when user is authenticated and has a travel profile selected
+  // Only show database loading when user is authenticated (removed travel profile requirement)
   const shouldShowDatabaseLoading =
-    user &&
-    selectedTravelProfile &&
-    (isLoading || !isInitialized || isSwitchingProfile);
+    user && (isLoading || !isInitialized || isSwitchingProfile);
 
   // Memoized calculations
   const totalSpent = useMemo(
@@ -712,29 +710,30 @@ export default function TravelExpensesTracker() {
     );
   }
 
-  // Show message when no travel profile is selected
-  if (user && !selectedTravelProfile && !isLoadingProfiles) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center space-y-6 max-w-md mx-auto p-6">
-          <Plane className="h-16 w-16 text-blue-600 mx-auto" />
-          <h2 className="text-2xl font-bold text-slate-900">
-            No Travel Profile Selected
-          </h2>
-          <p className="text-slate-600">
-            Please select a travel profile to start tracking expenses, or create
-            a new one.
-          </p>
-          <Button
-            onClick={() => window.open("/sharing", "_blank")}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Manage Travel Profiles
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Show message when no travel profile is selected - REMOVED FORCED SELECTION
+  // Users can now use the app without selecting a travel profile
+  // if (user && !selectedTravelProfile && !isLoadingProfiles) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+  //       <div className="text-center space-y-6 max-w-md mx-auto p-6">
+  //         <Plane className="h-16 w-16 text-blue-600 mx-auto" />
+  //         <h2 className="text-2xl font-bold text-slate-900">
+  //           No Travel Profile Selected
+  //         </h2>
+  //         <p className="text-slate-600">
+  //           Please select a travel profile to start tracking expenses, or create
+  //           a new one.
+  //         </p>
+  //         <Button
+  //           onClick={() => window.open("/sharing", "_blank")}
+  //           className="bg-blue-600 hover:bg-blue-700"
+  //         >
+  //           Manage Travel Profiles
+  //         </Button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
@@ -848,8 +847,45 @@ export default function TravelExpensesTracker() {
           </div>
         )} */}
 
-        {/* No Travel Profiles Message */}
+        {/* Optional Travel Profile Creation - Not blocking */}
         {user && travelProfiles.length === 0 && !isLoadingProfiles && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-lg">
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center space-x-3">
+                <Plane className="h-8 w-8 text-blue-600" />
+                <h3 className="text-xl font-semibold text-blue-900">
+                  Want to Collaborate?
+                </h3>
+              </div>
+              <p className="text-blue-700 max-w-2xl mx-auto">
+                Create a travel profile to collaborate with friends and family
+                on shared expenses. This is completely optional - you can
+                continue using the app for personal expense tracking.
+              </p>
+              <div className="flex justify-center space-x-3">
+                <Button
+                  onClick={() => window.open("/sharing", "_blank")}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Create Travel Profile
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Hide this message for the session
+                    setTravelProfiles([{ id: "hidden", name: "Hidden" }]);
+                  }}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  Maybe Later
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* No Travel Profiles Message - REMOVED since profiles are now optional */}
+        {/* {user && travelProfiles.length === 0 && !isLoadingProfiles && (
           <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-6">
             <div className="text-center py-6">
               <Plane className="h-12 w-12 text-slate-400 mx-auto mb-3" />
@@ -868,7 +904,7 @@ export default function TravelExpensesTracker() {
               </Button>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Budget Alert Banner - Only show if budget is set */}
         {budget?.amount && showBudgetAlert && (
