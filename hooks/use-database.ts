@@ -179,7 +179,7 @@ export function useDatabase(travelProfileId: string | null) {
     return () => {
       mounted = false;
     };
-  }, [loadData])
+  }, [travelProfileId]) // Remove loadData from dependencies to prevent circular issues
 
   // Reload data when travelProfileId changes (for profile switching)
   useEffect(() => {
@@ -187,7 +187,7 @@ export function useDatabase(travelProfileId: string | null) {
       console.log('useDatabase: travelProfileId changed, reloading data:', travelProfileId || 'personal use');
       loadData();
     }
-  }, [travelProfileId, isInitialized, isLoading, loadData])
+  }, [travelProfileId, isInitialized, isLoading]) // Remove loadData from dependencies
 
   // Listen for auth state changes to reload data when user logs in
   useEffect(() => {
@@ -204,7 +204,7 @@ export function useDatabase(travelProfileId: string | null) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadData, clearData, isInitialized])
+  }, [isInitialized]) // Remove loadData and clearData from dependencies
 
   // Expense operations
   const addExpense = useCallback(async (category: string, amount: number) => {

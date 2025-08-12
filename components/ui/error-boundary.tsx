@@ -1,8 +1,6 @@
 "use client";
 
-import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Component, ReactNode } from "react";
-import { Button } from "./button";
 
 interface Props {
   children: ReactNode;
@@ -21,51 +19,54 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
+    // Update state so the next render will show the fallback UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    // Log error to console for debugging
+    console.error("🚨 ErrorBoundary caught an error:", error, errorInfo);
+    
+    // You can also log the error to an error reporting service here
+    // logErrorToService(error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
+      // You can render any custom fallback UI
       return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
-            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-2">
-              Something went wrong
-            </h2>
-            <p className="text-slate-600 mb-4">
-              {this.state.error?.message || "An unexpected error occurred"}
-            </p>
-            <div className="space-y-3">
-              <Button
-                onClick={() =>
-                  this.setState({ hasError: false, error: undefined })
-                }
-                className="w-full"
+        this.props.fallback || (
+          <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+              <div className="text-red-500 text-6xl mb-4">🚨</div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">
+                Something went wrong
+              </h1>
+              <p className="text-gray-600 mb-6">
+                We're sorry, but something unexpected happened. Please try refreshing the page.
+              </p>
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false });
+                  window.location.reload();
+                }}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-                className="w-full"
-              >
-                Reload Page
-              </Button>
+                Refresh Page
+              </button>
+              {process.env.NODE_ENV === "development" && this.state.error && (
+                <details className="mt-4 text-left">
+                  <summary className="cursor-pointer text-sm text-gray-500">
+                    Error Details (Development)
+                  </summary>
+                  <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded overflow-auto">
+                    {this.state.error.stack}
+                  </pre>
+                </details>
+              )}
             </div>
           </div>
-        </div>
+        )
       );
     }
 

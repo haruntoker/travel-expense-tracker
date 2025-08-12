@@ -8,19 +8,28 @@ let supabaseInstance: ReturnType<typeof createClient> | null = null
 
 export const supabase = (() => {
   if (supabaseInstance) {
-    console.log('🔄 Reusing existing Supabase client instance')
     return supabaseInstance
   }
   
-  console.log('🆕 Creating new Supabase client instance')
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  })
-  return supabaseInstance
+  // Validate environment variables before creating client
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('❌ Missing Supabase environment variables')
+    throw new Error('Missing Supabase environment variables')
+  }
+  
+  try {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    })
+    return supabaseInstance
+  } catch (error) {
+    console.error('❌ Failed to create Supabase client:', error)
+    throw error
+  }
 })()
 
 // Database types
