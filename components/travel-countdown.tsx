@@ -45,6 +45,7 @@ export function TravelCountdown({
   });
   const [isEditing, setIsEditing] = useState(false);
   const [tempDate, setTempDate] = useState<string>("");
+  const [tempTime, setTempTime] = useState<string>("12:00");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -118,26 +119,29 @@ export function TravelCountdown({
       return;
     }
 
-    const selectedDate = new Date(tempDate);
+    // Combine date and time
+    const dateTimeString = `${tempDate}T${tempTime}`;
+    const selectedDate = new Date(dateTimeString);
     const now = new Date();
 
     if (selectedDate <= now) {
       toast({
         title: "❌ Invalid Date",
-        description: "Please select a future date for your travel countdown.",
+        description: "Please select a future date and time for your travel countdown.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const success = await setTravelCountdown(tempDate);
+      const success = await setTravelCountdown(dateTimeString);
       if (success) {
         setIsEditing(false);
         setTempDate("");
+        setTempTime("12:00");
         toast({
           title: "🎉 Countdown Started!",
-          description: `Your travel countdown is now active for ${tempDate}!`,
+          description: `Your travel countdown is now active for ${tempDate} at ${tempTime}!`,
         });
       }
     } catch (error) {
@@ -148,7 +152,7 @@ export function TravelCountdown({
         variant: "destructive",
       });
     }
-  }, [tempDate, setTravelCountdown, toast]);
+  }, [tempDate, tempTime, setTravelCountdown, toast]);
 
   const handleClearCountdown = useCallback(async () => {
     try {
@@ -210,6 +214,22 @@ export function TravelCountdown({
                     className="text-center text-lg border-blue-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="travel-time"
+                    className="text-blue-800 font-medium"
+                  >
+                    What time?
+                  </Label>
+                  <Input
+                    id="travel-time"
+                    type="time"
+                    value={tempTime}
+                    onChange={(e) => setTempTime(e.target.value)}
+                    className="text-center text-lg border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
 
                 <div className="flex justify-center space-x-3">
                   <Button
@@ -217,6 +237,7 @@ export function TravelCountdown({
                     onClick={() => {
                       setIsEditing(false);
                       setTempDate("");
+                      setTempTime("12:00");
                     }}
                     className="border-blue-300 text-blue-700 hover:bg-blue-100"
                   >
@@ -274,6 +295,12 @@ export function TravelCountdown({
             year: "numeric",
             month: "long",
             day: "numeric",
+          })}
+          {" at "}
+          {new Date(travelDate).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
           })}
         </p>
       </CardHeader>
@@ -348,7 +375,12 @@ export function TravelCountdown({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsEditing(true)}
+            onClick={() => {
+              // Populate current values for editing
+              setTempDate(travelDate.split('T')[0]);
+              setTempTime(travelDate.split('T')[1]?.substring(0, 5) || "12:00");
+              setIsEditing(true);
+            }}
             className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
           >
             <Calendar className="h-4 w-4 mr-2" />
@@ -392,6 +424,22 @@ export function TravelCountdown({
                 className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
               />
             </div>
+            
+            <div className="space-y-2">
+              <Label
+                htmlFor="edit-travel-time"
+                className="text-emerald-800 font-medium"
+              >
+                New travel time
+              </Label>
+              <Input
+                id="edit-travel-time"
+                type="time"
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+              />
+            </div>
 
             <div className="flex justify-end space-x-3">
               <Button
@@ -399,6 +447,7 @@ export function TravelCountdown({
                 onClick={() => {
                   setIsEditing(false);
                   setTempDate("");
+                  setTempTime("12:00");
                 }}
                 className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
               >
