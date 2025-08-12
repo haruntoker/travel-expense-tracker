@@ -321,11 +321,18 @@ export const ProfileModal = memo(function ProfileModal({
               </>
             ) : (
               <>
-                <Button onClick={() => setIsEditing(true)} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
                   <Edit3 className="h-4 w-4 mr-2" />
                   Edit Profile
                 </Button>
-                <Button variant="outline" onClick={onClose} className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
                   Close
                 </Button>
               </>

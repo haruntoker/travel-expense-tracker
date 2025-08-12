@@ -95,7 +95,10 @@ export const SettingsModal = memo(function SettingsModal({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="notifications" className="text-sm text-slate-700">
+                <Label
+                  htmlFor="notifications"
+                  className="text-sm text-slate-700"
+                >
                   Enable notifications
                 </Label>
                 <Switch
@@ -106,7 +109,10 @@ export const SettingsModal = memo(function SettingsModal({
               </div>
 
               <div className="flex items-center justify-between">
-                <Label htmlFor="budget-alerts" className="text-sm text-slate-700">
+                <Label
+                  htmlFor="budget-alerts"
+                  className="text-sm text-slate-700"
+                >
                   Budget alerts
                 </Label>
                 <Switch
@@ -169,7 +175,10 @@ export const SettingsModal = memo(function SettingsModal({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="data-visibility" className="text-sm text-slate-700">
+                <Label
+                  htmlFor="data-visibility"
+                  className="text-sm text-slate-700"
+                >
                   Data visibility
                 </Label>
                 <div className="flex items-center space-x-2">

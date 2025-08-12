@@ -1037,11 +1037,18 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                   </DialogTrigger>
                   <DialogContent className="bg-white border-slate-200">
                     <DialogHeader>
-                      <DialogTitle className="text-slate-900">Set Budget (Optional)</DialogTitle>
+                      <DialogTitle className="text-slate-900">
+                        Set Budget (Optional)
+                      </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="budget" className="text-slate-700 font-medium">Budget Amount (€)</Label>
+                        <Label
+                          htmlFor="budget"
+                          className="text-slate-700 font-medium"
+                        >
+                          Budget Amount (€)
+                        </Label>
                         <Input
                           id="budget"
                           type="number"
@@ -1085,7 +1092,10 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                           >
                             Cancel
                           </Button>
-                          <Button onClick={stableHandleBudgetUpdate} className="bg-blue-600 hover:bg-blue-700">
+                          <Button
+                            onClick={stableHandleBudgetUpdate}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
                             {budget ? "Update Budget" : "Set Budget"}
                           </Button>
                         </div>
@@ -1417,7 +1427,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
           {/* Charts */}
           <div className="space-y-6">
             {/* Expense Analytics */}
-            {user && isInitialized && !isLoading && expenses.length > 0 && (
+            {user && isInitialized && !isLoading && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-slate-900 flex items-center space-x-2">
@@ -1425,10 +1435,21 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                     <span>Expense Analytics</span>
                   </h2>
                 </div>
-                <ExpenseCharts
-                  key={`charts-${selectedTravelProfile || "personal"}`}
-                  expenses={expenses}
-                />
+
+                {expenses.length > 0 ? (
+                  <ExpenseCharts
+                    key={`charts-${selectedTravelProfile || "personal"}`}
+                    expenses={expenses}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-slate-500 px-4">
+                    <BarChart3 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                    <p className="text-sm sm:text-base">
+                      No expenses yet. Add some expenses to see analytics and
+                      charts!
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
