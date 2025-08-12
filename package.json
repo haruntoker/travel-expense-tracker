@@ -10,7 +10,8 @@
     "setup": "node scripts/setup-supabase.js",
     "test:connection": "node scripts/test-connection.js",
     "verify:schema": "node scripts/verify-schema.js",
-    "test:persistence": "node scripts/test-data-persistence.js"
+    "test:persistence": "node scripts/test-data-persistence.js",
+    "migrate": "node scripts/run-migration.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

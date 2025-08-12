@@ -68,6 +68,26 @@ ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.travel_countdowns ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can view own travel profiles" ON public.travel_profiles;
+DROP POLICY IF EXISTS "Users can insert own travel profiles" ON public.travel_profiles;
+DROP POLICY IF EXISTS "Users can update own travel profiles" ON public.travel_profiles;
+DROP POLICY IF EXISTS "Users can delete own travel profiles" ON public.travel_profiles;
+DROP POLICY IF EXISTS "Users can view own expenses" ON public.expenses;
+DROP POLICY IF EXISTS "Users can insert own expenses" ON public.expenses;
+DROP POLICY IF EXISTS "Users can update own expenses" ON public.expenses;
+DROP POLICY IF EXISTS "Users can delete own expenses" ON public.expenses;
+DROP POLICY IF EXISTS "Users can view own budgets" ON public.budgets;
+DROP POLICY IF EXISTS "Users can insert own budgets" ON public.budgets;
+DROP POLICY IF EXISTS "Users can update own budgets" ON public.budgets;
+DROP POLICY IF EXISTS "Users can delete own budgets" ON public.budgets;
+DROP POLICY IF EXISTS "Users can view own travel countdowns" ON public.travel_countdowns;
+DROP POLICY IF EXISTS "Users can insert own travel countdowns" ON public.travel_countdowns;
+DROP POLICY IF EXISTS "Users can update own travel countdowns" ON public.travel_countdowns;
+DROP POLICY IF EXISTS "Users can delete own travel countdowns" ON public.travel_countdowns;
+
 -- Create RLS policies
 -- Users can only see their own data
 CREATE POLICY "Users can view own profile" ON public.users
@@ -137,6 +157,9 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
 -- Create trigger to automatically create user profile
 CREATE TRIGGER on_auth_user_created

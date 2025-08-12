@@ -36,9 +36,17 @@ export function useDatabase(travelProfileId: string | null) {
 
   // Load all data from database with retry mechanism
   const loadData = useCallback(async (retryCount = 0) => {
+    // Don't load data if no travel profile is selected
+    if (!travelProfileId) {
+      console.log('loadData: No travelProfileId provided, skipping load')
+      setIsLoading(false)
+      setIsInitialized(true)
+      return
+    }
+    
     try {
       setIsLoading(true)
-      console.log(`loadData: Loading data for travelProfileId: ${travelProfileId || 'personal use'} (attempt ${retryCount + 1})`)
+      console.log(`loadData: Loading data for travelProfileId: ${travelProfileId} (attempt ${retryCount + 1})`)
       
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -46,9 +54,9 @@ export function useDatabase(travelProfileId: string | null) {
       })
       
       const dataPromise = Promise.all([
-        DatabaseService.getExpenses(travelProfileId || undefined),
-        DatabaseService.getBudget(travelProfileId || undefined),
-        DatabaseService.getTravelCountdown(travelProfileId || undefined),
+        DatabaseService.getExpenses(travelProfileId),
+        DatabaseService.getBudget(travelProfileId),
+        DatabaseService.getTravelCountdown(travelProfileId),
       ])
       
       const [expensesData, budgetData, countdownData] = await Promise.race([dataPromise, timeoutPromise])
@@ -93,8 +101,19 @@ export function useDatabase(travelProfileId: string | null) {
     } catch (error) {
       console.error(`Error loading data (attempt ${retryCount + 1}):`, error)
       
-      // Retry logic (max 3 attempts)
-      if (retryCount < 2 && !(error instanceof Error && error.message === 'User not authenticated')) {
+      // Don't retry on authentication errors or if already initialized
+      if (error instanceof Error && (
+        error.message === 'User not authenticated' || 
+        error.message === 'Data loading timeout'
+      )) {
+        console.log('Stopping retry loop due to:', error.message)
+        setIsInitialized(true)
+        setIsLoading(false)
+        return
+      }
+      
+      // Retry logic (max 1 attempt)
+      if (retryCount < 1) {
         console.log(`Retrying data load (attempt ${retryCount + 2})...`)
         setTimeout(() => loadData(retryCount + 1), 2000) // Wait 2 seconds before retry
         return
@@ -114,16 +133,18 @@ export function useDatabase(travelProfileId: string | null) {
           variant: 'destructive',
         })
       }
+      
+      // Mark as initialized even on error to prevent infinite loops
+      setIsInitialized(true)
+      setIsLoading(false)
     } finally {
       setIsLoading(false)
     }
   }, [travelProfileId, toast])
 
-  // Initialize data on mount - now allows data loading without travel profile
+  // Initialize data on mount - but only if user is authenticated and has a travel profile
   useEffect(() => {
     let mounted = true;
-    let retryCount = 0;
-    const maxRetries = 3;
     
     const initializeData = async () => {
       try {
@@ -146,20 +167,8 @@ export function useDatabase(travelProfileId: string | null) {
             await loadData();
           }
         } else {
-          // No user session, retry a few times in case session is still loading
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(`useDatabase: No user session, retrying in 1 second (attempt ${retryCount}/${maxRetries})`);
-            setTimeout(() => {
-              if (mounted) {
-                initializeData();
-              }
-            }, 1000);
-            return;
-          }
-          
-          // Max retries reached, mark as initialized
-          console.log('useDatabase: No user session after retries, marking as initialized');
+          // No user session, mark as initialized
+          console.log('useDatabase: No user session, marking as initialized');
           if (mounted) {
             setIsInitialized(true);
             setIsLoading(false);
@@ -179,15 +188,7 @@ export function useDatabase(travelProfileId: string | null) {
     return () => {
       mounted = false;
     };
-  }, [travelProfileId]) // Remove loadData from dependencies to prevent circular issues
-
-  // Reload data when travelProfileId changes (for profile switching)
-  useEffect(() => {
-    if (isInitialized && !isLoading) {
-      console.log('useDatabase: travelProfileId changed, reloading data:', travelProfileId || 'personal use');
-      loadData();
-    }
-  }, [travelProfileId, isInitialized, isLoading]) // Remove loadData from dependencies
+  }, [travelProfileId]) // Only depend on travelProfileId
 
   // Listen for auth state changes to reload data when user logs in
   useEffect(() => {
@@ -204,7 +205,7 @@ export function useDatabase(travelProfileId: string | null) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isInitialized]) // Remove loadData and clearData from dependencies
+  }, [isInitialized]) // Only depend on isInitialized
 
   // Expense operations
   const addExpense = useCallback(async (category: string, amount: number) => {
