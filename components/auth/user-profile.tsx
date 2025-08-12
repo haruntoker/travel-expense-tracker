@@ -54,9 +54,9 @@ export function UserProfile() {
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="flex items-center space-x-2 hover:bg-slate-100"
+            className="flex items-center space-x-2 hover:bg-slate-100 p-2 sm:p-3"
           >
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
               {user.user_metadata?.avatar_url ? (
                 <img
                   src={user.user_metadata.avatar_url}
@@ -64,7 +64,7 @@ export function UserProfile() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">
+                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs sm:text-sm font-medium">
                   {getUserInitials(user.email || "")}
                 </AvatarFallback>
               )}

@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Plane, X } from "lucide-react";
+import { Calendar, Plane, X, Clock } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 interface CountdownTime {
@@ -127,7 +127,8 @@ export function TravelCountdown({
     if (selectedDate <= now) {
       toast({
         title: "❌ Invalid Date",
-        description: "Please select a future date and time for your travel countdown.",
+        description:
+          "Please select a future date and time for your travel countdown.",
         variant: "destructive",
       });
       return;
@@ -183,7 +184,7 @@ export function TravelCountdown({
             <div className="space-y-3">
               <div className="flex items-center justify-center space-x-3">
                 <div className="p-3 bg-blue-100 rounded-full">
-                  <Plane className="h-8 w-8 text-blue-600" />
+                  <Clock className="h-8 w-8 text-blue-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-blue-900">
                   Travel Countdown
@@ -214,7 +215,7 @@ export function TravelCountdown({
                     className="text-center text-lg border-blue-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label
                     htmlFor="travel-time"
@@ -377,8 +378,8 @@ export function TravelCountdown({
             size="sm"
             onClick={() => {
               // Populate current values for editing
-              setTempDate(travelDate.split('T')[0]);
-              setTempTime(travelDate.split('T')[1]?.substring(0, 5) || "12:00");
+              setTempDate(travelDate.split("T")[0]);
+              setTempTime(travelDate.split("T")[1]?.substring(0, 5) || "12:00");
               setIsEditing(true);
             }}
             className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
@@ -424,7 +425,7 @@ export function TravelCountdown({
                 className="text-center text-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label
                 htmlFor="edit-travel-time"
