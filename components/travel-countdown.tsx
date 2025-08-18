@@ -11,7 +11,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -21,11 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -54,7 +48,6 @@ export const TravelCountdown = memo(function TravelCountdown({
   const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
   const [tempTime, setTempTime] = useState<string>("12:00");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
 
   // Use database hook with travel profile ID (can be empty string for personal use)
@@ -190,10 +183,6 @@ export const TravelCountdown = memo(function TravelCountdown({
     }
   }, [clearTravelCountdown, toast]);
 
-  const handleDateTimeDone = useCallback(() => {
-    setIsDatePickerOpen(false);
-  }, []);
-
   // If no countdown is set, show the setup interface
   if (!isActive || !travelDate) {
     return (
@@ -226,41 +215,23 @@ export const TravelCountdown = memo(function TravelCountdown({
                   >
                     When are you traveling?
                   </Label>
-                  <Popover
-                    open={isDatePickerOpen}
-                    onOpenChange={setIsDatePickerOpen}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {tempDate ? format(tempDate, "PPP") : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-4" align="start">
-                      <CalendarIcon
-                        mode="single"
-                        selected={tempDate}
-                        onSelect={setTempDate}
-                        disabled={(date: Date) => date <= new Date()}
-                        initialFocus
-                      />
-                      <div className="mt-4 flex items-center">
-                        <Clock className="mr-2 h-4 w-4" />
-                        <Input
-                          type="time"
-                          value={tempTime}
-                          onChange={(e) => setTempTime(e.target.value)}
-                          className="w-[100px]"
-                        />
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <Button onClick={handleDateTimeDone}>Done</Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <Input
+                    id="travel-date"
+                    type="date"
+                    value={tempDate ? format(tempDate, "yyyy-MM-dd") : ""}
+                    onChange={(e) =>
+                      setTempDate(
+                        e.target.value ? new Date(e.target.value) : undefined
+                      )
+                    }
+                    className="w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  <Input
+                    type="time"
+                    value={tempTime}
+                    onChange={(e) => setTempTime(e.target.value)}
+                    className="w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
 
                 <div className="flex justify-center space-x-3">
@@ -450,41 +421,23 @@ export const TravelCountdown = memo(function TravelCountdown({
               >
                 New travel date
               </Label>
-              <Popover
-                open={isDatePickerOpen}
-                onOpenChange={setIsDatePickerOpen}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900"
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {tempDate ? format(tempDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="start">
-                  <CalendarIcon
-                    mode="single"
-                    selected={tempDate}
-                    onSelect={setTempDate}
-                    disabled={(date: Date) => date <= new Date()}
-                    initialFocus
-                  />
-                  <div className="mt-4 flex items-center">
-                    <Clock className="mr-2 h-4 w-4" />
-                    <Input
-                      type="time"
-                      value={tempTime}
-                      onChange={(e) => setTempTime(e.target.value)}
-                      className="w-[100px]"
-                    />
-                  </div>
-                  <div className="mt-4 flex justify-end">
-                    <Button onClick={handleDateTimeDone}>Done</Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <Input
+                id="edit-travel-date"
+                type="date"
+                value={tempDate ? format(tempDate, "yyyy-MM-dd") : ""}
+                onChange={(e) =>
+                  setTempDate(
+                    e.target.value ? new Date(e.target.value) : undefined
+                  )
+                }
+                className="w-full border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900"
+              />
+              <Input
+                type="time"
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                className="w-full border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900"
+              />
             </div>
 
             <div className="flex justify-end space-x-3">
