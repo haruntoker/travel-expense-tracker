@@ -575,24 +575,30 @@ export const ExpenseTable = memo(function ExpenseTable({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-zinc-50 border-zinc-200 rounded-lg shadow-xl p-6">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="flex items-center space-x-2 text-red-600 font-semibold text-xl">
-              <Trash2 className="h-6 w-6 text-red-500" />
+        <DialogContent className="sm:max-w-md bg-zinc-50 border-zinc-200 rounded-2xl shadow-xl p-6 transform transition-all sm:w-full sm:mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="mb-4 text-center">
+            <DialogTitle className="flex flex-col items-center space-y-2 text-red-600 font-extrabold text-2xl">
+              <Trash2 className="h-10 w-10 text-red-400 mb-2" />
               <span>Confirm Deletion</span>
             </DialogTitle>
-            <DialogDescription className="text-zinc-700 text-base mt-2">
-              Are you sure you want to delete the expense "
-              {expenseToDelete?.category}" with amount €
-              {expenseToDelete?.amount?.toLocaleString()}? This action cannot be
-              undone.
+            <DialogDescription className="text-zinc-600 text-base leading-relaxed mt-2 mx-4">
+              You are about to delete the expense "
+              <span className="font-semibold text-zinc-800">
+                {expenseToDelete?.category}
+              </span>
+              " with amount €
+              <span className="font-semibold text-zinc-800">
+                {expenseToDelete?.amount?.toLocaleString()}
+              </span>
+              . This action cannot be undone and the data will be permanently
+              removed.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-3 mt-4">
+          <DialogFooter className="flex-col sm:flex-row gap-3 mt-6 w-full">
             <Button
               variant="outline"
               onClick={cancelDelete}
-              className="w-full sm:w-auto border-zinc-300 text-zinc-700 hover:bg-zinc-100 transition-all duration-200"
+              className="w-full sm:w-1/2 border-zinc-300 text-zinc-700 hover:bg-zinc-100 transition-all duration-200 rounded-lg py-2"
             >
               Cancel
             </Button>
@@ -600,17 +606,17 @@ export const ExpenseTable = memo(function ExpenseTable({
               variant="destructive"
               onClick={confirmDelete}
               className={cn(
-                "w-full sm:w-auto bg-red-400 hover:bg-red-500 text-white transition-all duration-200",
+                "w-full sm:w-1/2 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 rounded-lg py-2",
                 isDeleting && "opacity-70 cursor-not-allowed"
               )}
               disabled={isDeleting}
             >
               {isDeleting ? (
-                <span className="flex items-center">
+                <span className="flex items-center justify-center">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
                 </span>
               ) : (
-                <span className="flex items-center">
+                <span className="flex items-center justify-center">
                   <Trash2 className="h-4 w-4 mr-2" /> Delete Expense
                 </span>
               )}
@@ -621,21 +627,21 @@ export const ExpenseTable = memo(function ExpenseTable({
 
       {/* Edit Confirmation Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-zinc-50 border-zinc-200 rounded-lg shadow-xl p-6">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="flex items-center space-x-2 text-blue-600 font-semibold text-xl">
-              <Edit3 className="h-6 w-6 text-blue-500" />
+        <DialogContent className="sm:max-w-md bg-zinc-50 border-zinc-200 rounded-2xl shadow-xl p-6 transform transition-all sm:w-full sm:mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="mb-4 text-center">
+            <DialogTitle className="flex flex-col items-center space-y-2 text-blue-600 font-extrabold text-2xl">
+              <Edit3 className="h-10 w-10 text-blue-400 mb-2" />
               <span>Edit Expense</span>
             </DialogTitle>
-            <DialogDescription className="text-zinc-700 text-base mt-2 mb-4">
+            <DialogDescription className="text-zinc-600 text-base leading-relaxed mt-2 mx-4 mb-4">
               Make changes to the expense below. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 px-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label
                 htmlFor="editCategory"
-                className="text-right text-zinc-700"
+                className="text-right text-zinc-700 font-medium"
               >
                 Category
               </Label>
@@ -647,11 +653,14 @@ export const ExpenseTable = memo(function ExpenseTable({
                   if (e.key === "Enter") saveEditConfirmed();
                   if (e.key === "Escape") cancelEditDialog();
                 }}
-                className="col-span-3 border-blue-300 focus:border-blue-500 text-sm"
+                className="col-span-3 border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editAmount" className="text-right text-zinc-700">
+              <Label
+                htmlFor="editAmount"
+                className="text-right text-zinc-700 font-medium"
+              >
                 Amount (€)
               </Label>
               <Input
@@ -665,15 +674,15 @@ export const ExpenseTable = memo(function ExpenseTable({
                 }}
                 min="0"
                 step="0.01"
-                className="col-span-3 text-right border-blue-300 focus:border-blue-500 text-sm"
+                className="col-span-3 text-right border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2"
               />
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-3 mt-4">
+          <DialogFooter className="flex-col sm:flex-row gap-3 mt-6 w-full">
             <Button
               variant="outline"
               onClick={cancelEditDialog}
-              className="w-full sm:w-auto border-zinc-300 text-zinc-700 hover:bg-zinc-100 transition-all duration-200"
+              className="w-full sm:w-1/2 border-zinc-300 text-zinc-700 hover:bg-zinc-100 transition-all duration-200 rounded-lg py-2"
             >
               Cancel
             </Button>
@@ -681,17 +690,17 @@ export const ExpenseTable = memo(function ExpenseTable({
               variant="outline"
               onClick={saveEditConfirmed}
               className={cn(
-                "w-full sm:w-auto bg-blue-400 hover:bg-blue-500 text-white transition-all duration-200",
+                "w-full sm:w-1/2 bg-blue-500 hover:bg-blue-600 text-white transition-all duration-200 rounded-lg py-2",
                 isSaving && "opacity-70 cursor-not-allowed"
               )}
               disabled={isSaving}
             >
               {isSaving ? (
-                <span className="flex items-center">
+                <span className="flex items-center justify-center">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
                 </span>
               ) : (
-                <span className="flex items-center">
+                <span className="flex items-center justify-center">
                   <Edit3 className="h-4 w-4 mr-2" /> Save Changes
                 </span>
               )}
