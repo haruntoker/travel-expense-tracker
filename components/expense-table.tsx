@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -624,15 +625,50 @@ export const ExpenseTable = memo(function ExpenseTable({
           <DialogHeader className="mb-4">
             <DialogTitle className="flex items-center space-x-2 text-blue-600 font-semibold text-xl">
               <Edit3 className="h-6 w-6 text-blue-500" />
-              <span>Confirm Edit</span>
+              <span>Edit Expense</span>
             </DialogTitle>
-            <DialogDescription className="text-zinc-700 text-base mt-2">
-              Are you sure you want to edit the expense "
-              {expenseToEdit?.category}" to category "{editCategory}" and amount
-              €{Number.parseFloat(editValue).toLocaleString()}? This action
-              cannot be undone.
+            <DialogDescription className="text-zinc-700 text-base mt-2 mb-4">
+              Make changes to the expense below. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label
+                htmlFor="editCategory"
+                className="text-right text-zinc-700"
+              >
+                Category
+              </Label>
+              <Input
+                id="editCategory"
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveEditConfirmed();
+                  if (e.key === "Escape") cancelEditDialog();
+                }}
+                className="col-span-3 border-blue-300 focus:border-blue-500 text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="editAmount" className="text-right text-zinc-700">
+                Amount (€)
+              </Label>
+              <Input
+                id="editAmount"
+                type="number"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveEditConfirmed();
+                  if (e.key === "Escape") cancelEditDialog();
+                }}
+                min="0"
+                step="0.01"
+                className="col-span-3 text-right border-blue-300 focus:border-blue-500 text-sm"
+              />
+            </div>
+          </div>
           <DialogFooter className="flex-col sm:flex-row gap-3 mt-4">
             <Button
               variant="outline"
