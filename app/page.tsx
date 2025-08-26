@@ -79,7 +79,9 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
   } = useDatabase(selectedTravelProfile);
 
   // Combine authentication and database loading states
-  const appIsLoading = authLoading || (user && !isInitialized && isLoading);
+  const appIsLoading = Boolean(
+    authLoading || (user && !isInitialized && isLoading)
+  );
 
   // Debounced refresh function to prevent rapid successive calls
   const debouncedRefresh = useCallback(() => {
@@ -699,6 +701,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
             <TravelCountdown
               key={selectedTravelProfile || "personal"}
               travelProfileId={selectedTravelProfile || ""}
+              isLoading={appIsLoading}
             />
           </div>
         )}

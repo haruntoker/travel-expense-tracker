@@ -35,8 +35,10 @@ interface CountdownTime {
 
 export const TravelCountdown = memo(function TravelCountdown({
   travelProfileId,
+  isLoading: isLoadingProp,
 }: {
   travelProfileId: string;
+  isLoading?: boolean;
 }) {
   const [countdown, setCountdown] = useState<CountdownTime>({
     days: 0,
@@ -51,8 +53,15 @@ export const TravelCountdown = memo(function TravelCountdown({
   const { toast } = useToast();
 
   // Use database hook with travel profile ID (can be empty string for personal use)
-  const { travelCountdown, setTravelCountdown, clearTravelCountdown } =
-    useDatabase(travelProfileId || null);
+  const {
+    travelCountdown,
+    setTravelCountdown,
+    clearTravelCountdown,
+    isLoading,
+  } = useDatabase(travelProfileId || null);
+
+  // Combine internal and external loading states
+  const isLoadingCountdown = isLoadingProp || isLoading;
 
   // Get travel date from database state
   const travelDate = travelCountdown?.travelDate || "";
@@ -207,6 +216,23 @@ export const TravelCountdown = memo(function TravelCountdown({
     }
   }, [clearTravelCountdown, toast]);
 
+  const formatNumber = (num: number) => num.toString().padStart(2, "0");
+
+  // Show loading skeleton if the countdown data is still being fetched
+  if (isLoadingCountdown) {
+    return (
+      <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-6 animate-pulse">
+            <div className="h-8 w-3/4 mx-auto bg-blue-200 rounded"></div>
+            <div className="h-4 w-1/2 mx-auto bg-blue-100 rounded"></div>
+            <div className="h-10 w-48 mx-auto bg-blue-300 rounded"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // If no countdown is set, show the setup interface
   if (!isActive || !travelDate) {
     return (
@@ -304,8 +330,6 @@ export const TravelCountdown = memo(function TravelCountdown({
       </Card>
     );
   }
-
-  const formatNumber = (num: number) => num.toString().padStart(2, "0");
 
   return (
     <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 shadow-lg hover:shadow-xl transition-all duration-300">
