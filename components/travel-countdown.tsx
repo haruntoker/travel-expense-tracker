@@ -24,7 +24,7 @@ import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Calendar, Clock, X } from "lucide-react";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
 interface CountdownTime {
   days: number;
@@ -57,6 +57,30 @@ export const TravelCountdown = memo(function TravelCountdown({
   // Get travel date from database state
   const travelDate = travelCountdown?.travelDate || "";
   const isActive = travelCountdown?.isActive || false;
+
+  const totalDurationInMs = useMemo(() => {
+    if (!travelCountdown?.travelDate || !travelCountdown?.createdAt) return 0;
+    const targetTime = new Date(travelCountdown.travelDate).getTime();
+    const startTime = travelCountdown.createdAt.getTime();
+    return Math.max(0, targetTime - startTime);
+  }, [travelCountdown?.travelDate, travelCountdown?.createdAt]);
+
+  const currentProgressPercentage = useMemo(() => {
+    if (totalDurationInMs === 0) return 0; // Avoid division by zero
+
+    const now = new Date().getTime();
+    const targetTime = new Date(travelDate).getTime();
+
+    // Calculate time remaining from now until target date
+    const timeRemainingMs = Math.max(0, targetTime - now);
+
+    // Percentage of time remaining relative to the total initial duration
+    // The bar should visually represent this remaining percentage.
+    return Math.min(
+      100,
+      Math.max(0, (timeRemainingMs / totalDurationInMs) * 100)
+    );
+  }, [travelDate, totalDurationInMs]);
 
   // Countdown timer effect
   useEffect(() => {
@@ -364,13 +388,7 @@ export const TravelCountdown = memo(function TravelCountdown({
             <div
               className="bg-emerald-500 h-2 rounded-full transition-all duration-1000 ease-out"
               style={{
-                width: `${Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    ((countdown.days * 24 + countdown.hours) / (365 * 24)) * 100
-                  )
-                )}%`,
+                width: `${currentProgressPercentage}%`,
               }}
             ></div>
           </div>
