@@ -182,13 +182,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: userMessage };
       }
 
-      // Force a page reload to trigger data loading for the authenticated user
-      if (data.user) {
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500); // Give user time to see success message
-      }
-
       return { success: true };
     } catch (error) {
       return {

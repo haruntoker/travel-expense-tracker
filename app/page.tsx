@@ -78,6 +78,9 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
     isRefreshing,
   } = useDatabase(selectedTravelProfile);
 
+  // Combine authentication and database loading states
+  const appIsLoading = authLoading || (user && !isInitialized && isLoading);
+
   // Debounced refresh function to prevent rapid successive calls
   const debouncedRefresh = useCallback(() => {
     if (refreshTimeout) {
@@ -266,14 +269,6 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
       loadData();
     }
   }, [loadData]);
-
-  // Only show database loading when user is authenticated (removed travel profile requirement)
-  // Temporarily disabled to fix RLS policy issues
-  const shouldShowDatabaseLoading = false; // user && (!isInitialized || (isLoading && expenses.length === 0));
-
-  // Show a subtle refresh indicator instead of full loading when refreshing existing data
-  const shouldShowRefreshIndicator =
-    user && isRefreshing && expenses.length > 0;
 
   // Memoized calculations
   const totalSpent = useMemo(
@@ -604,31 +599,22 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
     return <AuthForm />;
   }
 
-  // Show loading while auth is initializing
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <div className="text-lg text-slate-700">Initializing...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (shouldShowDatabaseLoading) {
+  // Show loading while app is initializing (auth or data)
+  if (appIsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <div className="text-lg text-slate-700">
-            {isSwitchingProfile
+            {authLoading
+              ? "Initializing authentication..."
+              : isSwitchingProfile
               ? "Switching travel profiles..."
               : "Loading your travel expenses..."}
           </div>
-          {isSwitchingProfile && (
+          {(isSwitchingProfile || authLoading) && (
             <p className="text-sm text-slate-500">
-              Please wait while we load data for the new profile...
+              Please wait while we prepare your data...
             </p>
           )}
         </div>
@@ -643,7 +629,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
         <div className="flex items-center justify-between p-4 md:p-6 lg:p-8">
           {/* App Title */}
           <div className="flex items-center space-x-2">
-          <h1 className="text-xl font-bold text-blue-800">
+            <h1 className="text-xl font-bold text-blue-800">
               Travel Expenses Tracker
             </h1>
           </div>
@@ -659,16 +645,8 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
           spending patterns, and stay within budget.
         </p>
 
-        {/* Subtle Refresh Indicator */}
-        {shouldShowRefreshIndicator && (
-          <div className="flex items-center justify-center space-x-2 text-sm text-slate-600 bg-blue-50 border border-blue-200 rounded-lg py-2 px-4 max-w-xs mx-auto">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            <span>Refreshing data...</span>
-          </div>
-        )}
-
         {/* Last Updated Indicator */}
-        {user && isInitialized && !isLoading && expenses.length > 0 && (
+        {user && !appIsLoading && isInitialized && expenses.length > 0 && (
           <div className="text-center">
             <p className="text-xs text-slate-500">
               Last updated: {new Date().toLocaleTimeString()}
