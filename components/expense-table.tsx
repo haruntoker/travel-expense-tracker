@@ -641,7 +641,7 @@ export const ExpenseTable = memo(function ExpenseTable({
             <div className="grid grid-cols-4 items-center gap-4">
               <Label
                 htmlFor="editCategory"
-                className="text-right text-zinc-700 font-medium"
+                className="text-right text-zinc-700 font-medium justify-self-end"
               >
                 Category
               </Label>
@@ -659,7 +659,7 @@ export const ExpenseTable = memo(function ExpenseTable({
             <div className="grid grid-cols-4 items-center gap-4">
               <Label
                 htmlFor="editAmount"
-                className="text-right text-zinc-700 font-medium"
+                className="text-right text-zinc-700 font-medium justify-self-end"
               >
                 Amount (€)
               </Label>
