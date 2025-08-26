@@ -25,6 +25,7 @@ import {
   Calendar,
   Check,
   Edit3,
+  Loader2,
   Plus,
   Search,
   SortAsc,
@@ -70,6 +71,10 @@ export const ExpenseTable = memo(function ExpenseTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Memoized filtered and sorted expenses
   const filteredAndSortedExpenses = useMemo(() => {
@@ -141,30 +146,45 @@ export const ExpenseTable = memo(function ExpenseTable({
   // Edit handlers
   const startEditing = useCallback(
     (id: string, currentAmount: number, currentCategory: string) => {
-      setEditingId(id);
+      setExpenseToEdit({
+        id,
+        amount: currentAmount,
+        category: currentCategory,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       setEditValue(currentAmount.toString());
       setEditCategory(currentCategory);
+      setEditDialogOpen(true);
     },
     []
   );
 
-  const saveEdit = useCallback(() => {
-    if (editingId) {
+  const saveEditConfirmed = useCallback(() => {
+    if (expenseToEdit) {
+      setIsSaving(true);
       const amount = Number.parseFloat(editValue);
       if (isNaN(amount) || amount < 0) {
+        setIsSaving(false);
         return;
       }
-      onUpdateExpense(editingId, amount, editCategory);
-      setEditingId(null);
-      setEditValue("");
-      setEditCategory("");
+      try {
+        onUpdateExpense(expenseToEdit.id, amount, editCategory);
+        setEditDialogOpen(false);
+        setExpenseToEdit(null);
+        setEditingId(null); // Reset editingId from inline edit
+      } finally {
+        setIsSaving(false);
+      }
     }
-  }, [editingId, editValue, editCategory, onUpdateExpense]);
+  }, [expenseToEdit, editValue, editCategory, onUpdateExpense]);
 
-  const cancelEdit = useCallback(() => {
-    setEditingId(null);
+  const cancelEditDialog = useCallback(() => {
+    setEditDialogOpen(false);
     setEditValue("");
     setEditCategory("");
+    setExpenseToEdit(null);
+    setEditingId(null);
   }, []);
 
   // Add new expense handlers
@@ -195,9 +215,14 @@ export const ExpenseTable = memo(function ExpenseTable({
 
   const confirmDelete = useCallback(() => {
     if (expenseToDelete) {
-      onDeleteExpense(expenseToDelete.id);
-      setDeleteDialogOpen(false);
-      setExpenseToDelete(null);
+      setIsDeleting(true);
+      try {
+        onDeleteExpense(expenseToDelete.id);
+        setDeleteDialogOpen(false);
+        setExpenseToDelete(null);
+      } finally {
+        setIsDeleting(false);
+      }
     }
   }, [expenseToDelete, onDeleteExpense]);
 
@@ -386,8 +411,8 @@ export const ExpenseTable = memo(function ExpenseTable({
                             onChange={(e) => setEditCategory(e.target.value)}
                             className="border-blue-300 focus:border-blue-500 text-sm"
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") saveEdit();
-                              if (e.key === "Escape") cancelEdit();
+                              if (e.key === "Enter") saveEditConfirmed();
+                              if (e.key === "Escape") cancelEditDialog();
                             }}
                             autoFocus
                           />
@@ -419,15 +444,15 @@ export const ExpenseTable = memo(function ExpenseTable({
                               min="0"
                               step="0.01"
                               onKeyDown={(e) => {
-                                if (e.key === "Enter") saveEdit();
-                                if (e.key === "Escape") cancelEdit();
+                                if (e.key === "Enter") saveEditConfirmed();
+                                if (e.key === "Escape") cancelEditDialog();
                               }}
                               autoFocus
                             />
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={saveEdit}
+                              onClick={saveEditConfirmed}
                               className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 w-8 p-0"
                             >
                               <Check className="h-3 w-3" />
@@ -435,7 +460,7 @@ export const ExpenseTable = memo(function ExpenseTable({
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={cancelEdit}
+                              onClick={cancelEditDialog}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
                             >
                               <X className="h-3 w-3" />
@@ -549,33 +574,91 @@ export const ExpenseTable = memo(function ExpenseTable({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-white border-slate-200">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-red-600">
-              <Trash2 className="h-5 w-5" />
-              <span>Delete Expense</span>
+        <DialogContent className="sm:max-w-md bg-zinc-50 border-zinc-200 rounded-lg shadow-xl p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="flex items-center space-x-2 text-red-600 font-semibold text-xl">
+              <Trash2 className="h-6 w-6 text-red-500" />
+              <span>Confirm Deletion</span>
             </DialogTitle>
-            <DialogDescription className="text-slate-700">
-              Are you sure you want to delete "{expenseToDelete?.category}" with
-              amount €{expenseToDelete?.amount?.toLocaleString()}? This action
-              cannot be undone.
+            <DialogDescription className="text-zinc-700 text-base mt-2">
+              Are you sure you want to delete the expense "
+              {expenseToDelete?.category}" with amount €
+              {expenseToDelete?.amount?.toLocaleString()}? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-3 mt-4">
             <Button
               variant="outline"
               onClick={cancelDelete}
-              className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-50"
+              className="w-full sm:w-auto border-zinc-300 text-zinc-700 hover:bg-zinc-100 transition-all duration-200"
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={confirmDelete}
-              className="w-full sm:w-auto"
+              className={cn(
+                "w-full sm:w-auto bg-red-400 hover:bg-red-500 text-white transition-all duration-200",
+                isDeleting && "opacity-70 cursor-not-allowed"
+              )}
+              disabled={isDeleting}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
+              {isDeleting ? (
+                <span className="flex items-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete Expense
+                </span>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Confirmation Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-zinc-50 border-zinc-200 rounded-lg shadow-xl p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="flex items-center space-x-2 text-blue-600 font-semibold text-xl">
+              <Edit3 className="h-6 w-6 text-blue-500" />
+              <span>Confirm Edit</span>
+            </DialogTitle>
+            <DialogDescription className="text-zinc-700 text-base mt-2">
+              Are you sure you want to edit the expense "
+              {expenseToEdit?.category}" to category "{editCategory}" and amount
+              €{Number.parseFloat(editValue).toLocaleString()}? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-3 mt-4">
+            <Button
+              variant="outline"
+              onClick={cancelEditDialog}
+              className="w-full sm:w-auto border-zinc-300 text-zinc-700 hover:bg-zinc-100 transition-all duration-200"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={saveEditConfirmed}
+              className={cn(
+                "w-full sm:w-auto bg-blue-400 hover:bg-blue-500 text-white transition-all duration-200",
+                isSaving && "opacity-70 cursor-not-allowed"
+              )}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <span className="flex items-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <Edit3 className="h-4 w-4 mr-2" /> Save Changes
+                </span>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -583,3 +666,7 @@ export const ExpenseTable = memo(function ExpenseTable({
     </Card>
   );
 });
+
+/*
+  TODO: Add confirmation dialog for editing expenses with a soft blue/green color scheme for the edit action.
+*/
