@@ -9,7 +9,7 @@ import {
   PieChart as PieChartIcon,
   TrendingUp,
 } from "lucide-react";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -17,6 +17,7 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
+  Sector,
   Tooltip,
   XAxis,
   YAxis,
@@ -76,9 +77,80 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const CustomActiveShape = (props: any) => {
+  const RADIAN = Math.PI / 180;
+  const {
+    cx,
+    cy,
+    midAngle,
+    innerRadius,
+    outerRadius,
+    startAngle,
+    endAngle,
+    fill,
+    payload,
+    percent,
+    value,
+  } = props;
+  const sin = Math.sin(-RADIAN * midAngle);
+  const cos = Math.cos(-RADIAN * midAngle);
+  const sx = cx + (outerRadius + 10) * cos;
+  const sy = cy + (outerRadius + 10) * sin;
+  const mx = cx + (outerRadius + 30) * cos;
+  const my = cy + (outerRadius + 30) * sin;
+  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+  const ey = my;
+  const textAnchor = cos >= 0 ? "start" : "end";
+
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+      <Sector
+        cx={cx}
+        cy={cy}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        innerRadius={outerRadius + 6}
+        outerRadius={outerRadius + 10}
+        fill={fill}
+      />
+      <path
+        d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+        stroke={fill}
+        fill="none"
+      />
+      <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+      <text
+        x={ex + (cos >= 0 ? 1 : -1) * 12}
+        y={ey}
+        textAnchor={textAnchor}
+        fill="#333"
+      >{`€${value.toLocaleString()}`}</text>
+      <text
+        x={ex + (cos >= 0 ? 1 : -1) * 12}
+        y={ey + 15}
+        textAnchor={textAnchor}
+        fill="#999"
+      >
+        {`${(percent * 100).toFixed(2)}%`}
+      </text>
+    </g>
+  );
+};
+
 export const ExpenseCharts = memo(function ExpenseCharts({
   expenses,
 }: ExpenseChartsProps) {
+  const [activeIndex, setActiveIndex] = useState(-1);
+
   // Memoized chart data calculations
   const chartData = useMemo(() => {
     if (!expenses || expenses.length === 0) return [];
@@ -239,6 +311,8 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                         outerRadius={120}
                         fill="#8884d8"
                         dataKey="amount"
+                        onMouseEnter={(_, index) => setActiveIndex(index)}
+                        onMouseLeave={() => setActiveIndex(-1)}
                       >
                         {chartDataWithColors.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
@@ -254,7 +328,14 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                   {chartDataWithColors.map((item, index) => (
                     <div
                       key={index}
-                      className="flex items-center space-x-2 p-2 rounded-lg bg-slate-50"
+                      className={`flex items-center space-x-2 p-2 rounded-lg bg-slate-50 cursor-pointer ${
+                        activeIndex === index ? "ring-2 ring-primary" : ""
+                      }`}
+                      onClick={() =>
+                        setActiveIndex(activeIndex === index ? -1 : index)
+                      }
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onMouseLeave={() => setActiveIndex(-1)}
                     >
                       <div
                         className="w-3 h-3 rounded-full"
