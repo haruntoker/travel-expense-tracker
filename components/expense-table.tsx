@@ -26,9 +26,9 @@ import {
   Calendar,
   Check,
   Edit3,
-  SaveIcon,
   Loader2,
   Plus,
+  SaveIcon,
   Search,
   SortAsc,
   SortDesc,
@@ -36,7 +36,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
 interface Expense {
   id: string;
@@ -77,6 +77,16 @@ export const ExpenseTable = memo(function ExpenseTable({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Effect to prevent auto-focus when the edit dialog opens
+  useEffect(() => {
+    if (editDialogOpen) {
+      // Blur any active element to prevent unwanted keyboard appearance
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+  }, [editDialogOpen]);
 
   // Memoized filtered and sorted expenses
   const filteredAndSortedExpenses = useMemo(() => {
@@ -626,7 +636,10 @@ export const ExpenseTable = memo(function ExpenseTable({
 
       {/* Edit Confirmation Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-zinc-50 border-zinc-200 rounded-2xl shadow-xl p-6 transform transition-all sm:w-full sm:mx-auto max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="sm:max-w-md bg-zinc-50 border-zinc-200 rounded-2xl shadow-xl p-6 transform transition-all sm:w-full sm:mx-auto max-h-[90vh] overflow-y-auto"
+          tabIndex={-1}
+        >
           <DialogHeader className="mb-4 text-center">
             <DialogTitle className="flex flex-col items-center space-y-2 text-blue-600 font-extrabold text-2xl">
               <Edit3 className="h-10 w-10 text-blue-400 mb-2" />
@@ -637,10 +650,10 @@ export const ExpenseTable = memo(function ExpenseTable({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 px-4">
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="flex items-center justify-between gap-4">
               <Label
                 htmlFor="editCategory"
-                className="text-zinc-700 font-medium"
+                className="text-zinc-700 font-medium text-right flex-shrink-0"
               >
                 Category
               </Label>
@@ -652,11 +665,14 @@ export const ExpenseTable = memo(function ExpenseTable({
                   if (e.key === "Enter") saveEditConfirmed();
                   if (e.key === "Escape") cancelEditDialog();
                 }}
-                className="col-span-3 border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2"
+                className="border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2 flex-grow"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editAmount" className="text-zinc-700 font-medium">
+            <div className="flex items-center justify-between gap-4">
+              <Label
+                htmlFor="editAmount"
+                className="text-zinc-700 font-medium text-right flex-shrink-0"
+              >
                 Amount (€)
               </Label>
               <Input
@@ -670,7 +686,7 @@ export const ExpenseTable = memo(function ExpenseTable({
                 }}
                 min="0"
                 step="0.01"
-                className="col-span-3 text-right border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2"
+                className="text-right border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2 flex-grow"
               />
             </div>
           </div>
