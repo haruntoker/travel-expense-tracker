@@ -92,6 +92,12 @@ const CustomActiveShape = (props: any) => {
     percent,
     value,
   } = props;
+
+  // Add null checks for payload, percent, and value
+  if (!payload || percent === undefined || value === undefined) {
+    return null; // Don't render if essential data is missing
+  }
+
   const sin = Math.sin(-RADIAN * midAngle);
   const cos = Math.cos(-RADIAN * midAngle);
   const sx = cx + (outerRadius + 10) * cos;
