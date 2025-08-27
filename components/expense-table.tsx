@@ -415,7 +415,6 @@ export const ExpenseTable = memo(function ExpenseTable({
                               if (e.key === "Enter") saveEditConfirmed();
                               if (e.key === "Escape") cancelEditDialog();
                             }}
-                            autoFocus
                           />
                         ) : (
                           <div className="flex flex-col space-y-1">
@@ -448,7 +447,6 @@ export const ExpenseTable = memo(function ExpenseTable({
                                 if (e.key === "Enter") saveEditConfirmed();
                                 if (e.key === "Escape") cancelEditDialog();
                               }}
-                              autoFocus
                             />
                             <Button
                               size="sm"
@@ -641,7 +639,7 @@ export const ExpenseTable = memo(function ExpenseTable({
             <div className="grid grid-cols-4 items-center gap-4">
               <Label
                 htmlFor="editCategory"
-                className="text-right text-zinc-700 font-medium justify-self-end"
+                className="text-zinc-700 font-medium"
               >
                 Category
               </Label>
@@ -657,10 +655,7 @@ export const ExpenseTable = memo(function ExpenseTable({
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label
-                htmlFor="editAmount"
-                className="text-right text-zinc-700 font-medium justify-self-end"
-              >
+              <Label htmlFor="editAmount" className="text-zinc-700 font-medium">
                 Amount (€)
               </Label>
               <Input
