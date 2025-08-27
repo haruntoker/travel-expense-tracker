@@ -94,8 +94,9 @@ const CustomActiveShape = (props: any) => {
   } = props;
 
   // Add null checks for payload, percent, and value
-  if (!payload || percent === undefined || value === undefined) {
-    return null; // Don't render if essential data is missing
+  if (!payload || typeof percent !== "number" || typeof value !== "number") {
+    // Return an empty group element instead of null to prevent Recharts from crashing
+    return <g />;
   }
 
   const sin = Math.sin(-RADIAN * midAngle);
@@ -290,6 +291,10 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                           const category = payload?.category || "";
                           const percentage = ((percent || 0) * 100).toFixed(0);
                           const userIndex = (index || 0) + 1; // Convert to user-friendly index (1-based)
+                          const amount = payload?.amount ?? 0; // Safely get amount
+
+                          if (!payload) return null; // Defensive check
+
                           return (
                             <g>
                               {/* Mobile: Show minimal info */}
@@ -309,7 +314,7 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                                 className="text-xs fill-current hidden md:block"
                               >
                                 {userIndex}: {category} €
-                                {payload?.amount?.toLocaleString() || 0}
+                                {amount.toLocaleString()}
                               </text>
                             </g>
                           );
