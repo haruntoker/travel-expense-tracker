@@ -36,7 +36,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface Expense {
   id: string;
@@ -78,6 +78,9 @@ export const ExpenseTable = memo(function ExpenseTable({
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const categoryInputRef = useRef<HTMLInputElement>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
+
   // Effect to prevent auto-focus when the edit dialog opens
   useEffect(() => {
     if (editDialogOpen) {
@@ -85,6 +88,9 @@ export const ExpenseTable = memo(function ExpenseTable({
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
+      // Explicitly blur the input fields if they exist
+      categoryInputRef.current?.blur();
+      amountInputRef.current?.blur();
     }
   }, [editDialogOpen]);
 
@@ -650,33 +656,36 @@ export const ExpenseTable = memo(function ExpenseTable({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 px-4">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
               <Label
                 htmlFor="editCategory"
-                className="text-zinc-700 font-medium text-right flex-shrink-0"
+                className="text-zinc-700 font-medium text-left w-[100px] flex-shrink-0"
               >
                 Category
               </Label>
               <Input
                 id="editCategory"
+                ref={categoryInputRef}
                 value={editCategory}
                 onChange={(e) => setEditCategory(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") saveEditConfirmed();
                   if (e.key === "Escape") cancelEditDialog();
                 }}
-                className="border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2 flex-grow"
+                className="text-right border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2 flex-grow"
+                autoFocus={false}
               />
             </div>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
               <Label
                 htmlFor="editAmount"
-                className="text-zinc-700 font-medium text-right flex-shrink-0"
+                className="text-zinc-700 font-medium text-left w-[100px] flex-shrink-0"
               >
                 Amount (€)
               </Label>
               <Input
                 id="editAmount"
+                ref={amountInputRef}
                 type="number"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
@@ -687,6 +696,7 @@ export const ExpenseTable = memo(function ExpenseTable({
                 min="0"
                 step="0.01"
                 className="text-right border-blue-300 focus:border-blue-500 text-base rounded-lg px-4 py-2 flex-grow"
+                autoFocus={false}
               />
             </div>
           </div>
