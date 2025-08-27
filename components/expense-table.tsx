@@ -26,6 +26,7 @@ import {
   Calendar,
   Check,
   Edit3,
+  SaveIcon,
   Loader2,
   Plus,
   Search,
@@ -696,7 +697,7 @@ export const ExpenseTable = memo(function ExpenseTable({
                 </span>
               ) : (
                 <span className="flex items-center justify-center">
-                  <Edit3 className="h-4 w-4 mr-2" /> Save Changes
+                  <SaveIcon className="h-4 w-4 mr-2" /> Save Changes
                 </span>
               )}
             </Button>
