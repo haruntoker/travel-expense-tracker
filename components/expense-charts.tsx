@@ -61,13 +61,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const userIndex = entry?.payload?.userIndex || 1;
 
     return (
-      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-        {/* Mobile: Show minimal info */}
-        <p className="font-semibold text-gray-900 md:hidden">
-          {userIndex}: {category}
-        </p>
-        {/* Desktop: Show full info */}
-        <p className="font-semibold text-gray-900 hidden md:block">
+      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg min-w-[150px]">
+        <p className="font-semibold text-gray-900">
           {userIndex}: {category} €{amount.toLocaleString()}
         </p>
       </div>
@@ -110,11 +105,22 @@ export const ExpenseCharts = memo(function ExpenseCharts({
   // Memoized percentage calculations
   const chartDataWithPercentages = useMemo(
     () =>
-      chartData.map((item) => ({
-        ...item,
-        percentage:
-          totalAmount > 0 ? Math.round((item.amount / totalAmount) * 100) : 0,
-      })),
+      chartData.map((item) => {
+        const rawPercentage =
+          totalAmount > 0 ? (item.amount / totalAmount) * 100 : 0;
+        let percentage;
+
+        if (rawPercentage > 0 && rawPercentage < 0.1) {
+          percentage = "<0.1"; // Display as <0.1% for very small percentages
+        } else {
+          percentage = rawPercentage.toFixed(1); // Round to one decimal place
+        }
+
+        return {
+          ...item,
+          percentage: percentage,
+        };
+      }),
     [chartData, totalAmount]
   );
 
@@ -134,14 +140,14 @@ export const ExpenseCharts = memo(function ExpenseCharts({
 
   if (!hasData) {
     return (
-      <Card className="shadow-lg">
-        <CardHeader>
+      <Card className="shadow-lg h-full flex flex-col">
+        <CardHeader className="flex-shrink-0">
           <CardTitle className="flex items-center space-x-2">
             <Activity className="h-5 w-5 text-gray-600" />
             <span>Expense Analytics</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex items-center justify-center">
           <div className="text-center py-12 text-gray-500">
             <Activity className="h-16 w-16 mx-auto text-gray-300 mb-4" />
             <p className="text-lg font-medium">No expense data available</p>
@@ -155,8 +161,8 @@ export const ExpenseCharts = memo(function ExpenseCharts({
   }
 
   return (
-    <Card className="shadow-lg border-slate-200">
-      <CardHeader>
+    <Card className="shadow-lg border-slate-200 h-full flex flex-col">
+      <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <TrendingUp className="h-5 w-5 text-blue-600" />
@@ -170,9 +176,9 @@ export const ExpenseCharts = memo(function ExpenseCharts({
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="pie" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-slate-100">
+      <CardContent className="flex-1 flex flex-col">
+        <Tabs defaultValue="pie" className="w-full h-full flex flex-col">
+          <TabsList className="grid w-full grid-cols-3 bg-slate-100 flex-shrink-0">
             <TabsTrigger
               value="pie"
               className="flex items-center space-x-2 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
@@ -197,10 +203,10 @@ export const ExpenseCharts = memo(function ExpenseCharts({
           </TabsList>
 
           {/* Pie Chart Tab */}
-          <TabsContent value="pie" className="mt-6">
+          <TabsContent value="pie" className="mt-6 flex-1 flex flex-col">
             {chartData.length > 0 ? (
-              <div className="space-y-6">
-                <div className="h-64 md:h-80">
+              <div className="space-y-6 flex-1 flex flex-col">
+                <div className="h-64 md:h-80 flex-shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -208,34 +214,6 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ payload, percent, index }) => {
-                          const category = payload?.category || "";
-                          const percentage = ((percent || 0) * 100).toFixed(0);
-                          const userIndex = (index || 0) + 1; // Convert to user-friendly index (1-based)
-                          return (
-                            <g>
-                              {/* Mobile: Show minimal info */}
-                              <text
-                                x="0"
-                                y="0"
-                                textAnchor="middle"
-                                className="text-xs fill-current md:hidden"
-                              >
-                                {userIndex}
-                              </text>
-                              {/* Desktop: Show full info */}
-                              <text
-                                x="0"
-                                y="0"
-                                textAnchor="middle"
-                                className="text-xs fill-current hidden md:block"
-                              >
-                                {userIndex}: {category} €
-                                {payload?.amount?.toLocaleString() || 0}
-                              </text>
-                            </g>
-                          );
-                        }}
                         outerRadius={120}
                         fill="#8884d8"
                         dataKey="amount"
@@ -250,27 +228,44 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                 </div>
 
                 {/* Legend */}
-                <div className="grid grid-cols-1 gap-2 md:gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-2">
                   {chartDataWithColors.map((item, index) => (
                     <div
                       key={index}
-                      className="flex items-center space-x-2 p-2 rounded-lg bg-slate-50"
+                      className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors duration-200"
                     >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-sm font-medium text-slate-700">
-                        {/* Mobile: Show minimal info */}
-                        <span className="md:hidden">
-                          {item.userIndex}: {item.category}
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-xs font-bold text-slate-900">
+                          {item.userIndex}.
                         </span>
-                        {/* Desktop: Show full info */}
-                        <span className="hidden md:inline">
-                          {item.userIndex}: {item.category} €
-                          {item.amount.toLocaleString()} ({item.percentage}%)
+                        <span className="text-xs font-medium text-slate-800 truncate">
+                          {item.category}
                         </span>
-                      </span>
+                        <span className="text-xs text-slate-500">
+                          €{item.amount.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        <div className="w-12 bg-slate-200 rounded-full h-1 overflow-hidden">
+                          <div
+                            className="h-1 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${parseFloat(
+                                item.percentage as string
+                              )}%`,
+                              backgroundColor: item.color,
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-900 w-8 text-right">
+                          {item.percentage}%
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -284,10 +279,10 @@ export const ExpenseCharts = memo(function ExpenseCharts({
           </TabsContent>
 
           {/* Bar Chart Tab */}
-          <TabsContent value="bar" className="mt-6">
+          <TabsContent value="bar" className="mt-6 flex-1 flex flex-col">
             {chartData.length > 0 ? (
-              <div className="space-y-6">
-                <div className="h-64 md:h-80">
+              <div className="space-y-6 flex-1 flex flex-col">
+                <div className="h-64 md:h-80 flex-shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartDataWithColors}>
                       <XAxis
@@ -342,9 +337,9 @@ export const ExpenseCharts = memo(function ExpenseCharts({
           </TabsContent>
 
           {/* Summary Tab */}
-          <TabsContent value="summary" className="mt-6">
+          <TabsContent value="summary" className="mt-6 flex-1 flex flex-col">
             {chartData.length > 0 ? (
-              <div className="space-y-6">
+              <div className="space-y-6 flex-1 flex flex-col overflow-y-auto">
                 {/* Top Expenses */}
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-3">
@@ -395,45 +390,34 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                       ).toLocaleString()}
                     </div>
                     <div className="text-sm text-blue-700">
-                      {/* Mobile: Show minimal info */}
-                      <span className="md:hidden">
-                        {
-                          chartData.find(
-                            (d) =>
-                              d.amount ===
-                              Math.max(...chartData.map((d) => d.amount))
-                          )?.category
-                        }
-                      </span>
-                      {/* Desktop: Show full info */}
-                      <span className="hidden md:inline">
-                        {
-                          chartDataWithColors.find(
-                            (d) =>
-                              d.amount ===
-                              Math.max(...chartData.map((d) => d.amount))
-                          )?.userIndex
-                        }
-                        :{" "}
-                        {
-                          chartData.find(
-                            (d) =>
-                              d.amount ===
-                              Math.max(...chartData.map((d) => d.amount))
-                          )?.category
-                        }{" "}
-                        €
-                        {Math.max(
-                          ...chartData.map((d) => d.amount)
-                        ).toLocaleString()}{" "}
-                        (
-                        {Math.round(
-                          (Math.max(...chartData.map((d) => d.amount)) /
-                            chartData.reduce((sum, d) => sum + d.amount, 0)) *
-                            100
-                        )}
-                        %)
-                      </span>
+                      {
+                        chartDataWithColors.find(
+                          (d) =>
+                            d.amount ===
+                            Math.max(...chartData.map((d) => d.amount))
+                        )?.userIndex
+                      }
+                      :{" "}
+                      {
+                        chartData.find(
+                          (d) =>
+                            d.amount ===
+                            Math.max(...chartData.map((d) => d.amount))
+                        )?.category
+                      }{" "}
+                      €
+                      {Math.max(
+                        ...chartData.map((d) => d.amount)
+                      ).toLocaleString()}{" "}
+                      (
+                      {
+                        chartDataWithPercentages.find(
+                          (d) =>
+                            d.amount ===
+                            Math.max(...chartData.map((d) => d.amount))
+                        )?.percentage
+                      }
+                      %)
                     </div>
                   </div>
                   <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
@@ -447,45 +431,34 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                       ).toLocaleString()}
                     </div>
                     <div className="text-sm text-emerald-700">
-                      {/* Mobile: Show minimal info */}
-                      <span className="md:hidden">
-                        {
-                          chartData.find(
-                            (d) =>
-                              d.amount ===
-                              Math.min(...chartData.map((d) => d.amount))
-                          )?.category
-                        }
-                      </span>
-                      {/* Desktop: Show full info */}
-                      <span className="hidden md:inline">
-                        {
-                          chartDataWithColors.find(
-                            (d) =>
-                              d.amount ===
-                              Math.min(...chartData.map((d) => d.amount))
-                          )?.userIndex
-                        }
-                        :{" "}
-                        {
-                          chartData.find(
-                            (d) =>
-                              d.amount ===
-                              Math.min(...chartData.map((d) => d.amount))
-                          )?.category
-                        }{" "}
-                        €
-                        {Math.min(
-                          ...chartData.map((d) => d.amount)
-                        ).toLocaleString()}{" "}
-                        (
-                        {Math.round(
-                          (Math.min(...chartData.map((d) => d.amount)) /
-                            chartData.reduce((sum, d) => sum + d.amount, 0)) *
-                            100
-                        )}
-                        %)
-                      </span>
+                      {
+                        chartDataWithColors.find(
+                          (d) =>
+                            d.amount ===
+                            Math.min(...chartData.map((d) => d.amount))
+                        )?.userIndex
+                      }
+                      :{" "}
+                      {
+                        chartData.find(
+                          (d) =>
+                            d.amount ===
+                            Math.min(...chartData.map((d) => d.amount))
+                        )?.category
+                      }{" "}
+                      €
+                      {Math.min(
+                        ...chartData.map((d) => d.amount)
+                      ).toLocaleString()}{" "}
+                      (
+                      {
+                        chartDataWithPercentages.find(
+                          (d) =>
+                            d.amount ===
+                            Math.min(...chartData.map((d) => d.amount))
+                        )?.percentage
+                      }
+                      %)
                     </div>
                   </div>
                 </div>
@@ -499,40 +472,36 @@ export const ExpenseCharts = memo(function ExpenseCharts({
                     {chartDataWithColors.map((item, index) => (
                       <div
                         key={index}
-                        className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-3"
+                        className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg shadow-sm transition-all duration-200 hover:bg-slate-100"
                       >
                         <div className="flex items-center space-x-2">
                           <div
-                            className="w-4 h-4 rounded-full"
+                            className="w-3 h-3 rounded-full flex-shrink-0"
                             style={{ backgroundColor: item.color }}
                           />
-                          <span className="text-sm text-slate-700">
-                            {/* Mobile: Show minimal info */}
-                            <span className="md:hidden">
-                              {item.userIndex}: {item.category}
+                          <span className="text-sm font-medium text-slate-700 leading-tight">
+                            <span className="font-bold text-slate-800">
+                              {item.userIndex}. {item.category}
                             </span>
-                            {/* Desktop: Show full info */}
-                            <span className="hidden md:inline">
-                              {item.userIndex}: {item.category} €
-                              {item.amount.toLocaleString()} ({item.percentage}
-                              %)
+                            <span className="text-slate-500 ml-1">
+                              €{item.amount.toLocaleString()}
                             </span>
                           </span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="flex-1 bg-slate-200 rounded-full h-2">
-                            <div
-                              className="h-2 rounded-full transition-all duration-300"
-                              style={{
-                                width: `${item.percentage}%`,
-                                backgroundColor: item.color,
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium text-slate-900 w-16 text-right">
-                            {item.percentage}%
-                          </span>
+                        <div className="flex-1 bg-slate-200 rounded-full h-2 mx-3">
+                          <div
+                            className="h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${parseFloat(
+                                item.percentage as string
+                              )}%`,
+                              backgroundColor: item.color,
+                            }}
+                          />
                         </div>
+                        <span className="text-sm font-semibold text-slate-900 w-12 text-right">
+                          {item.percentage}%
+                        </span>
                       </div>
                     ))}
                   </div>

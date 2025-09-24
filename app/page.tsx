@@ -24,7 +24,7 @@ import {
   AlertTriangle,
   BarChart3,
   CheckCircle,
-  Euro,
+  FileSpreadsheet,
   Plane,
   Settings,
   Wallet,
@@ -45,6 +45,7 @@ const STORAGE_KEYS = {
   EXPENSES: "travel-expenses",
   BUDGET: "travel-budget",
   SELECTED_TRAVEL_PROFILE: "selected-travel-profile",
+  BUDGET_ALERT_DISMISSED: "budget-alert-dismissed",
 } as const;
 
 const TravelExpensesTracker = memo(function TravelExpensesTracker() {
@@ -418,7 +419,15 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
       budget?.amount &&
       totalSpent > budgetAmount
     ) {
-      setShowBudgetAlert(true);
+      // Create a unique key for this budget amount and overspend amount
+      const budgetKey = `${
+        STORAGE_KEYS.BUDGET_ALERT_DISMISSED
+      }-${budgetAmount}-${Math.floor(totalSpent - budgetAmount)}`;
+      const hasBeenDismissed = localStorage.getItem(budgetKey) === "true";
+
+      if (!hasBeenDismissed) {
+        setShowBudgetAlert(true);
+      }
     } else if (isInitialized && !isLoading) {
       setShowBudgetAlert(false);
     }
@@ -685,7 +694,14 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowBudgetAlert(false)}
+                  onClick={() => {
+                    setShowBudgetAlert(false);
+                    // Save dismissal state to localStorage with unique key
+                    const budgetKey = `${
+                      STORAGE_KEYS.BUDGET_ALERT_DISMISSED
+                    }-${budgetAmount}-${Math.floor(totalSpent - budgetAmount)}`;
+                    localStorage.setItem(budgetKey, "true");
+                  }}
                   className="text-red-600 hover:bg-red-100 w-full sm:w-auto"
                 >
                   Dismiss
@@ -792,9 +808,9 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                       />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-white border-slate-200">
+                  <DialogContent className="bg-white border-slate-200 max-w-[95vw] sm:max-w-md mx-4">
                     <DialogHeader>
-                      <DialogTitle className="text-black bg-white">
+                      <DialogTitle className="text-black bg-white text-lg">
                         Set Budget (Optional)
                       </DialogTitle>
                     </DialogHeader>
@@ -802,7 +818,7 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                       <div className="space-y-2">
                         <Label
                           htmlFor="budget"
-                          className="text-black bg-white font-medium"
+                          className="text-black bg-white font-medium text-sm"
                         >
                           Budget Amount (€)
                         </Label>
@@ -813,16 +829,16 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                           onChange={(e) =>
                             setTempBudget(Number(e.target.value))
                           }
-                          placeholder="Enter budget amount (optional)"
+                          placeholder="Enter amount"
                           min="0"
                           step="0.01"
-                          className="text-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="text-base border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                         />
                         <p className="text-xs text-slate-500">
                           Leave empty if you don't want to set a budget
                         </p>
                       </div>
-                      <div className="flex justify-between items-center">
+                      <div className="flex flex-col space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
                         <Button
                           variant="outline"
                           onClick={async () => {
@@ -836,24 +852,24 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
                               setShowBudgetAlert(false);
                             }
                           }}
-                          className="text-red-600 border-red-300 hover:bg-red-50 bg-white"
+                          className="text-red-600 border-red-300 hover:bg-red-50 bg-white text-sm w-full sm:w-auto"
                         >
                           Remove Budget
                         </Button>
 
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-2 w-full sm:w-auto">
                           <Button
                             variant="outline"
                             onClick={() => setIsBudgetDialogOpen(false)}
-                            className="border-slate-300 text-slate-700 hover:bg-slate-50 bg-white"
+                            className="border-slate-300 text-slate-700 hover:bg-slate-50 bg-white text-sm flex-1 sm:flex-none"
                           >
                             Cancel
                           </Button>
                           <Button
                             onClick={stableHandleBudgetUpdate}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="bg-blue-600 hover:bg-blue-700 text-sm flex-1 sm:flex-none"
                           >
-                            {budget ? "Update Budget" : "Set Budget"}
+                            {budget ? "Update" : "Set"}
                           </Button>
                         </div>
                       </div>
@@ -1169,9 +1185,9 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
         )}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Expense Table */}
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:items-start">
+          {/* Expense Management (Table + Timeline) */}
+          <div className="space-y-6 h-full">
             <ExpenseTable
               key={`table-${selectedTravelProfile || "personal"}`}
               expenses={expenses}
@@ -1182,17 +1198,19 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
           </div>
 
           {/* Charts */}
-          <div className="space-y-6">
+          <div className="space-y-6 h-full lg:sticky lg:top-8">
             {/* Expense Analytics */}
             {user && isInitialized && !isLoading && (
-              <div className="space-y-6">
+              <div className="space-y-6 h-full">
                 {expenses.length > 0 ? (
-                  <ExpenseCharts
-                    key={`charts-${selectedTravelProfile || "personal"}`}
-                    expenses={expenses}
-                  />
+                  <div className="lg:min-h-[600px]">
+                    <ExpenseCharts
+                      key={`charts-${selectedTravelProfile || "personal"}`}
+                      expenses={expenses}
+                    />
+                  </div>
                 ) : (
-                  <div className="text-center py-8 text-slate-500 px-4">
+                  <div className="text-center py-8 text-slate-500 px-4 lg:min-h-[600px] flex flex-col justify-center">
                     <BarChart3 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
                     <p className="text-sm sm:text-base">
                       No expenses yet. Add some expenses to see analytics and
@@ -1206,42 +1224,28 @@ const TravelExpensesTracker = memo(function TravelExpensesTracker() {
         </div>
 
         {/* Export Buttons */}
-        <div className="flex justify-center space-x-3">
+        <div className="flex justify-center mt-8">
           <Button
             onClick={() => exportData("excel")}
             disabled={isExporting}
-            variant="outline"
-            className="border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400"
+            className="group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-md bg-green-600 px-6 font-medium text-white transition-all duration-300 ease-out hover:bg-green-700 shadow-lg hover:shadow-xl active:scale-95"
           >
-            {isExporting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Euro className="h-4 w-4 mr-2" />
-                Export Excel
-              </>
-            )}
+            <span className="ease absolute right-0 -mr-40 h-32 w-8 rotate-45 bg-green-500 transition-all duration-300 group-hover:h-full group-hover:w-full"></span>
+            <span className="relative flex items-center text-lg">
+              {isExporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  Exporting Data...
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="h-5 w-5 mr-3" />
+                  Export to Excel
+                </>
+              )}
+            </span>
           </Button>
         </div>
-
-        {/* Debug Information (Development Only) */}
-        {process.env.NODE_ENV === "development" && user && (
-          <div className="bg-slate-100 rounded-lg border border-slate-300 p-4 text-xs">
-            <h3 className="font-semibold mb-2">Debug Info:</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div>Selected Profile: {selectedTravelProfile || "None"}</div>
-              <div>Profile Count: {travelProfiles.length}</div>
-              <div>Expenses: {expenses.length}</div>
-              <div>Budget: {budget ? `€${budget.amount}` : "None"}</div>
-              <div>Loading: {isLoading ? "Yes" : "No"}</div>
-              <div>Initialized: {isInitialized ? "Yes" : "No"}</div>
-              <div>Switching: {isSwitchingProfile ? "Yes" : "No"}</div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

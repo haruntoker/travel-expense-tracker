@@ -18,7 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDatabase } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +49,9 @@ export const TravelCountdown = memo(function TravelCountdown({
   const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
   const [tempTime, setTempTime] = useState<string>("12:00");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [hasShownTravelDayNotification, setHasShownTravelDayNotification] =
+    useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { toast } = useToast();
 
   // Use database hook with travel profile ID (can be empty string for personal use)
@@ -91,9 +93,25 @@ export const TravelCountdown = memo(function TravelCountdown({
     );
   }, [travelDate, totalDurationInMs]);
 
+  // Initialize notification state from localStorage and handle travel date changes
+  useEffect(() => {
+    if (!travelDate) {
+      setHasShownTravelDayNotification(false);
+      setIsInitialLoad(false);
+      return;
+    }
+
+    // Create a unique key for this specific travel date
+    const notificationKey = `travel-notification-${travelDate}`;
+    const hasShown = localStorage.getItem(notificationKey) === "true";
+
+    setHasShownTravelDayNotification(hasShown);
+    setIsInitialLoad(false);
+  }, [travelDate]);
+
   // Countdown timer effect
   useEffect(() => {
-    if (!isActive || !travelDate) return;
+    if (!isActive || !travelDate || isInitialLoad) return;
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
@@ -102,11 +120,22 @@ export const TravelCountdown = memo(function TravelCountdown({
 
       if (difference <= 0) {
         setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
-        toast({
-          title: "🎉 Travel Day! 🎉",
-          description:
-            "Your travel date has arrived! Have a fantastic trip and safe travels! ✈️",
-        });
+
+        // Only show the notification once and save to localStorage
+        if (!hasShownTravelDayNotification) {
+          const notificationKey = `travel-notification-${travelDate}`;
+          localStorage.setItem(notificationKey, "true");
+          setHasShownTravelDayNotification(true);
+
+          toast({
+            title: "🎉 Travel Day! 🎉",
+            description:
+              "Your travel date has arrived! Have a fantastic trip and safe travels! ✈️",
+          });
+        }
+
+        // Clear the timer to prevent further execution
+        clearInterval(timer);
         return;
       }
 
@@ -141,7 +170,14 @@ export const TravelCountdown = memo(function TravelCountdown({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isActive, travelDate, toast, countdown.days]);
+  }, [
+    isActive,
+    travelDate,
+    toast,
+    countdown.days,
+    hasShownTravelDayNotification,
+    isInitialLoad,
+  ]);
 
   const handleSetDate = useCallback(async () => {
     if (!tempDate) {
@@ -176,6 +212,8 @@ export const TravelCountdown = memo(function TravelCountdown({
     try {
       const success = await setTravelCountdown(dateTimeString);
       if (success) {
+        // Reset notification state for the new travel date
+        setHasShownTravelDayNotification(false);
         setIsEditing(false);
         setTempDate(undefined);
         setTempTime("12:00");
@@ -257,34 +295,95 @@ export const TravelCountdown = memo(function TravelCountdown({
 
             {/* Setup Form */}
             {isEditing ? (
-              <div className="space-y-4 max-w-sm mx-auto">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="travel-date"
-                    className="text-blue-800 font-medium"
-                  >
-                    When are you traveling?
-                  </Label>
-                  <Input
-                    id="travel-date"
-                    type="date"
-                    value={tempDate ? format(tempDate, "yyyy-MM-dd") : ""}
-                    onChange={(e) =>
-                      setTempDate(
-                        e.target.value ? new Date(e.target.value) : undefined
-                      )
-                    }
-                    className="w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                  <Input
-                    type="time"
-                    value={tempTime}
-                    onChange={(e) => setTempTime(e.target.value)}
-                    className="w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
+              <div className="space-y-6 max-w-sm mx-auto">
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="travel-date"
+                      className="text-blue-800 font-semibold text-sm block"
+                    >
+                      Travel Date
+                    </Label>
+                    <div
+                      className="relative cursor-pointer"
+                      onClick={() => {
+                        const input = document.getElementById(
+                          "travel-date"
+                        ) as HTMLInputElement;
+                        if (input) {
+                          input.focus();
+                          setTimeout(() => {
+                            try {
+                              input.showPicker?.();
+                            } catch (e) {
+                              // Fallback: trigger click on the input
+                              input.click();
+                            }
+                          }, 10);
+                        }
+                      }}
+                    >
+                      <input
+                        id="travel-date"
+                        type="date"
+                        value={tempDate ? format(tempDate, "yyyy-MM-dd") : ""}
+                        onChange={(e) =>
+                          setTempDate(
+                            e.target.value
+                              ? new Date(e.target.value)
+                              : undefined
+                          )
+                        }
+                        min={new Date().toISOString().split("T")[0]}
+                        className="w-full h-14 px-4 text-base font-medium text-slate-800 bg-white border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all duration-200 hover:border-blue-400 cursor-pointer shadow-sm [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-6 [&::-webkit-calendar-picker-indicator]:h-6 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:scale-110"
+                        style={{
+                          colorScheme: "light",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="travel-time"
+                      className="text-blue-800 font-semibold text-sm block"
+                    >
+                      Travel Time
+                    </Label>
+                    <div
+                      className="relative cursor-pointer"
+                      onClick={() => {
+                        const input = document.getElementById(
+                          "travel-time"
+                        ) as HTMLInputElement;
+                        if (input) {
+                          input.focus();
+                          setTimeout(() => {
+                            try {
+                              input.showPicker?.();
+                            } catch (e) {
+                              // Fallback: trigger click on the input
+                              input.click();
+                            }
+                          }, 10);
+                        }
+                      }}
+                    >
+                      <input
+                        id="travel-time"
+                        type="time"
+                        value={tempTime}
+                        onChange={(e) => setTempTime(e.target.value)}
+                        className="w-full h-14 px-4 text-base font-medium text-slate-800 bg-white border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all duration-200 hover:border-blue-400 cursor-pointer shadow-sm [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-6 [&::-webkit-calendar-picker-indicator]:h-6 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:scale-110"
+                        style={{
+                          colorScheme: "light",
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex justify-center space-x-3">
+                <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -292,13 +391,13 @@ export const TravelCountdown = memo(function TravelCountdown({
                       setTempDate(undefined);
                       setTempTime("12:00");
                     }}
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100 h-11 px-6"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleSetDate}
-                    className="bg-blue-600 hover:bg-blue-700 px-6"
+                    className="bg-blue-600 hover:bg-blue-700 h-11 px-6"
                   >
                     Start Countdown
                   </Button>
@@ -455,34 +554,93 @@ export const TravelCountdown = memo(function TravelCountdown({
               <span>Update Travel Date</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor="edit-travel-date"
-                className="text-emerald-800 font-medium"
-              >
-                New travel date
-              </Label>
-              <Input
-                id="edit-travel-date"
-                type="date"
-                value={tempDate ? format(tempDate, "yyyy-MM-dd") : ""}
-                onChange={(e) =>
-                  setTempDate(
-                    e.target.value ? new Date(e.target.value) : undefined
-                  )
-                }
-                className="w-full border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900"
-              />
-              <Input
-                type="time"
-                value={tempTime}
-                onChange={(e) => setTempTime(e.target.value)}
-                className="w-full border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 text-slate-900"
-              />
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <Label
+                  htmlFor="edit-travel-date"
+                  className="text-emerald-800 font-semibold text-sm block"
+                >
+                  Travel Date
+                </Label>
+                <div
+                  className="relative cursor-pointer"
+                  onClick={() => {
+                    const input = document.getElementById(
+                      "edit-travel-date"
+                    ) as HTMLInputElement;
+                    if (input) {
+                      input.focus();
+                      setTimeout(() => {
+                        try {
+                          input.showPicker?.();
+                        } catch (e) {
+                          // Fallback: trigger click on the input
+                          input.click();
+                        }
+                      }, 10);
+                    }
+                  }}
+                >
+                  <input
+                    id="edit-travel-date"
+                    type="date"
+                    value={tempDate ? format(tempDate, "yyyy-MM-dd") : ""}
+                    onChange={(e) =>
+                      setTempDate(
+                        e.target.value ? new Date(e.target.value) : undefined
+                      )
+                    }
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full h-14 px-4 text-base font-medium text-slate-800 bg-white border-2 border-emerald-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-200 hover:border-emerald-400 cursor-pointer shadow-sm [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-6 [&::-webkit-calendar-picker-indicator]:h-6 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:scale-110"
+                    style={{
+                      colorScheme: "light",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label
+                  htmlFor="edit-travel-time"
+                  className="text-emerald-800 font-semibold text-sm block"
+                >
+                  Travel Time
+                </Label>
+                <div
+                  className="relative cursor-pointer"
+                  onClick={() => {
+                    const input = document.getElementById(
+                      "edit-travel-time"
+                    ) as HTMLInputElement;
+                    if (input) {
+                      input.focus();
+                      setTimeout(() => {
+                        try {
+                          input.showPicker?.();
+                        } catch (e) {
+                          // Fallback: trigger click on the input
+                          input.click();
+                        }
+                      }, 10);
+                    }
+                  }}
+                >
+                  <input
+                    id="edit-travel-time"
+                    type="time"
+                    value={tempTime}
+                    onChange={(e) => setTempTime(e.target.value)}
+                    className="w-full h-14 px-4 text-base font-medium text-slate-800 bg-white border-2 border-emerald-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-200 hover:border-emerald-400 cursor-pointer shadow-sm [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-6 [&::-webkit-calendar-picker-indicator]:h-6 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:scale-110"
+                    style={{
+                      colorScheme: "light",
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -490,13 +648,13 @@ export const TravelCountdown = memo(function TravelCountdown({
                   setTempDate(undefined);
                   setTempTime("12:00");
                 }}
-                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 bg-white"
+                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 bg-white h-11 px-6"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSetDate}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-emerald-600 hover:bg-emerald-700 h-11 px-6"
               >
                 Update Date
               </Button>
